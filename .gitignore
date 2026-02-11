@@ -27,3 +27,9 @@ lighthouse-report*.html
 
 # Test artifacts
 coverage/
+
+# Local data symlink (points to user's local trading folder)
+data/paper_tradingview.csv
+
+# Python virtual env
+.venv/

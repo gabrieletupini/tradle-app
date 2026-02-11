@@ -51,14 +51,75 @@ class TradleApp {
         // Check if we're returning from a successful upload refresh
         this.checkPostRefreshState();
 
-        // Show welcome message for new users (no auto-loading)
-        if (!hasRestoredData && this.tradeDatabase.trades.length === 0) {
-            this.uiController.showToast('Welcome to Tradle! Upload your TradingView CSV to get started, or try the sample data.', 'info');
-        } else if (this.tradeDatabase.trades.length > 0 && !hasRestoredData) {
+        if (this.tradeDatabase.trades.length > 0 && !hasRestoredData) {
             // Show persistent database data if available
             const summary = this.tradeCalculator.generateSummary(this.tradeDatabase.trades);
             this.uiController.updateDashboard(this.tradeDatabase.trades, summary);
             this.uiController.showToast(`Restored ${this.tradeDatabase.trades.length} trades from database`, 'info');
+        } else if (!hasRestoredData && this.tradeDatabase.trades.length === 0) {
+            // No data in localStorage — try to auto-load the default CSV
+            const autoLoaded = await this.autoLoadDefaultCSV();
+            if (!autoLoaded) {
+                this.uiController.showToast('Welcome to Tradle! Upload your TradingView CSV to get started, or try the sample data.', 'info');
+            }
+        }
+    }
+
+    /**
+     * Auto-load the default CSV file (data/paper_tradingview.csv) on startup.
+     * This file is symlinked from the user's local trading folder so the
+     * dashboard always opens with the latest data.
+     * Returns true if data was loaded successfully.
+     */
+    async autoLoadDefaultCSV() {
+        const csvPath = 'data/paper_tradingview.csv';
+        try {
+            console.log(`📂 Auto-loading default CSV: ${csvPath}`);
+            const response = await fetch(csvPath);
+            if (!response.ok) {
+                console.log(`📂 Default CSV not found (${response.status}), skipping auto-load`);
+                return false;
+            }
+
+            const csvContent = await response.text();
+            if (!csvContent || csvContent.trim().length < 20) {
+                console.log('📂 Default CSV is empty, skipping');
+                return false;
+            }
+
+            console.log(`📂 Default CSV loaded: ${csvContent.length} chars`);
+
+            // Parse
+            const parseResult = this.csvParser.parseTradingViewCSV(csvContent);
+            if (parseResult.orders.length === 0) {
+                console.warn('⚠️ Default CSV contained no valid orders');
+                return false;
+            }
+
+            // Calculate trades
+            const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
+            if (tradeResult.trades.length === 0) {
+                console.warn('⚠️ Default CSV contained no matchable trades');
+                return false;
+            }
+
+            // Merge with database (handles deduplication)
+            this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+
+            // Persist
+            this.saveTradeDatabase();
+
+            // Update dashboard
+            const summary = this.tradeCalculator.generateSummary(this.tradeDatabase.trades);
+            this.uiController.updateDashboard(this.tradeDatabase.trades, summary);
+            this.uiController.showToast(`Auto-loaded ${this.tradeDatabase.trades.length} trades from default CSV`, 'success');
+
+            console.log(`✅ Auto-loaded ${this.tradeDatabase.trades.length} trades from ${csvPath}`);
+            return true;
+
+        } catch (error) {
+            console.log(`📂 Could not auto-load default CSV: ${error.message}`);
+            return false;
         }
     }
 
