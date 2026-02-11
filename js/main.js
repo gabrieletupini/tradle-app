@@ -51,28 +51,31 @@ class TradleApp {
         // Check if we're returning from a successful upload refresh
         this.checkPostRefreshState();
 
-        if (this.tradeDatabase.trades.length > 0 && !hasRestoredData) {
-            // Show persistent database data if available
+        // Always auto-load default data first, then merge with localStorage
+        const autoLoaded = await this.autoLoadDefaultCSV();
+
+        if (this.tradeDatabase.trades.length > 0) {
+            // Show whatever data we have (default + any stored)
             const summary = this.tradeCalculator.generateSummary(this.tradeDatabase.trades);
             this.uiController.updateDashboard(this.tradeDatabase.trades, summary);
-            this.uiController.showToast(`Restored ${this.tradeDatabase.trades.length} trades from database`, 'info');
-        } else if (!hasRestoredData && this.tradeDatabase.trades.length === 0) {
-            // No data in localStorage — try to auto-load the default CSV
-            const autoLoaded = await this.autoLoadDefaultCSV();
-            if (!autoLoaded) {
-                this.uiController.showToast('Welcome to Tradle! Upload your TradingView CSV to get started, or try the sample data.', 'info');
+            if (autoLoaded) {
+                this.uiController.showToast(`Loaded ${this.tradeDatabase.trades.length} trades — upload a CSV to update`, 'success');
+            } else {
+                this.uiController.showToast(`Restored ${this.tradeDatabase.trades.length} trades from database`, 'info');
             }
+        } else {
+            this.uiController.showToast('Welcome to Tradle! Upload your TradingView CSV to update your data.', 'info');
         }
     }
 
     /**
-     * Auto-load the default CSV file (data/paper_tradingview.csv) on startup.
-     * This file is symlinked from the user's local trading folder so the
-     * dashboard always opens with the latest data.
-     * Returns true if data was loaded successfully.
+     * Auto-load the default sample CSV on startup.
+     * The committed sample data is always available (even on GitHub Pages)
+     * and gets merged with any existing localStorage data.
+     * Upload a new CSV to overwrite/update.
      */
     async autoLoadDefaultCSV() {
-        const csvPath = 'data/paper_tradingview.csv';
+        const csvPath = 'data/sample-data/sample-tradingview-data.csv';
         try {
             console.log(`📂 Auto-loading default CSV: ${csvPath}`);
             const response = await fetch(csvPath);
