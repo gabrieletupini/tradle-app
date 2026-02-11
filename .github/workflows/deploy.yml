@@ -1,0 +1,213 @@
+name: Deploy Tradle Trading Journal to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for lockfile
+        id: check_lock
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Restore npm cache
+        if: steps.check_lock.outputs.exists == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json','**/npm-shrinkwrap.json','**/yarn.lock','**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Clean and install dependencies
+        run: |
+          # Remove any existing node_modules to prevent corruption
+          rm -rf node_modules package-lock.json 2>/dev/null || true
+
+          if [ -f package.json ]; then
+            echo "Installing fresh dependencies..."
+            npm install
+            echo "✅ Dependencies installed successfully"
+          else
+            echo "No package.json found — skipping npm install"
+          fi
+
+      - name: Optimize and minify assets
+        run: |
+          npm install -g html-minifier-terser uglifycss
+          mkdir -p dist
+          rsync -av --exclude='.git' --exclude='node_modules' --exclude='.github' --exclude='dist' ./ ./dist/ || true
+
+          # Minify HTML files
+          if [ -f dist/index.html ]; then
+            html-minifier-terser \
+              --collapse-whitespace \
+              --remove-comments \
+              --remove-optional-tags \
+              --remove-redundant-attributes \
+              --remove-script-type-attributes \
+              --remove-tag-whitespace \
+              --use-short-doctype \
+              --minify-css true \
+              --minify-js true \
+              --input-dir dist \
+              --output-dir dist \
+              --file-ext html
+          fi
+
+          # Minify CSS files
+          if [ -f dist/css/style.css ]; then
+            uglifycss dist/css/style.css > dist/css/style.min.css
+            mv dist/css/style.min.css dist/css/style.css
+          fi
+          if [ -f dist/css/responsive.css ]; then
+            uglifycss dist/css/responsive.css > dist/css/responsive.min.css
+            mv dist/css/responsive.min.css dist/css/responsive.css
+          fi
+
+          # Minify JS files
+          if [ -f dist/js/main.js ]; then
+            npx terser dist/js/main.js --compress --mangle --output dist/js/main.min.js
+            mv dist/js/main.min.js dist/js/main.js
+          fi
+          if [ -f dist/js/ui.js ]; then
+            npx terser dist/js/ui.js --compress --mangle --output dist/js/ui.min.js
+            mv dist/js/ui.min.js dist/js/ui.js
+          fi
+          if [ -f dist/js/csvParser.js ]; then
+            npx terser dist/js/csvParser.js --compress --mangle --output dist/js/csvParser.min.js
+            mv dist/js/csvParser.min.js dist/js/csvParser.js
+          fi
+          if [ -f dist/js/tradeCalculator.js ]; then
+            npx terser dist/js/tradeCalculator.js --compress --mangle --output dist/js/tradeCalculator.min.js
+            mv dist/js/tradeCalculator.min.js dist/js/tradeCalculator.js
+          fi
+
+      - name: Create robots.txt
+        run: |
+          mkdir -p dist
+          OWNER=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f1)
+          REPO=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)
+          echo "User-agent: *" > dist/robots.txt
+          echo "Allow: /" >> dist/robots.txt
+          echo "" >> dist/robots.txt
+          echo "Sitemap: https://${OWNER}.github.io/${REPO}/sitemap.xml" >> dist/robots.txt
+
+      - name: Create sitemap.xml
+        run: |
+          mkdir -p dist
+          OWNER=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f1)
+          REPO=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)
+          cat > dist/sitemap.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+            <url>
+              <loc>https://${OWNER}.github.io/${REPO}/</loc>
+              <lastmod>$(date -u +%Y-%m-%d)</lastmod>
+              <changefreq>weekly</changefreq>
+              <priority>1.0</priority>
+            </url>
+            <url>
+              <loc>https://${OWNER}.github.io/${REPO}/#dashboard</loc>
+              <lastmod>$(date -u +%Y-%m-%d)</lastmod>
+              <changefreq>weekly</changefreq>
+              <priority>0.9</priority>
+            </url>
+            <url>
+              <loc>https://${OWNER}.github.io/${REPO}/#import</loc>
+              <lastmod>$(date -u +%Y-%m-%d)</lastmod>
+              <changefreq>monthly</changefreq>
+              <priority>0.8</priority>
+            </url>
+            <url>
+              <loc>https://${OWNER}.github.io/${REPO}/#export</loc>
+              <lastmod>$(date -u +%Y-%m-%d)</lastmod>
+              <changefreq>monthly</changefreq>
+              <priority>0.8</priority>
+            </url>
+          </urlset>
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Lighthouse CI and dependencies
+        run: |
+          npm install -g @lhci/cli@0.12.x live-server
+          npm install || echo "Local npm install failed, continuing with global packages"
+
+      - name: Run Lighthouse CI
+        run: |
+          # Start a simple HTTP server for lighthouse
+          npx live-server --port=3000 --no-browser --ignore=node_modules &
+          SERVER_PID=$!
+
+          # Wait for server to start
+          sleep 10
+
+          # Run lighthouse
+          lhci autorun --upload.target=temporary-public-storage || echo "Lighthouse completed with warnings"
+
+          # Clean up server
+          kill $SERVER_PID 2>/dev/null || true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          LHCI_SERVER_BASE_URL: ${{ secrets.LHCI_SERVER_BASE_URL }}
+          LHCI_SERVER_TOKEN: ${{ secrets.LHCI_SERVER_TOKEN }}

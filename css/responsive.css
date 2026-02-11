@@ -1,0 +1,526 @@
+/* Tradle - Responsive Styles */
+
+/* Tablet Styles */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--spacing-3);
+    }
+
+    /* Header */
+    .header-content {
+        flex-direction: column;
+        gap: var(--spacing-4);
+        text-align: center;
+    }
+
+    .header-actions {
+        justify-content: center;
+    }
+
+    .logo {
+        justify-content: center;
+    }
+
+    /* Upload Section */
+    .upload-container {
+        padding: var(--spacing-6);
+    }
+
+    .format-options {
+        grid-template-columns: 1fr;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(4, 1fr);
+        gap: var(--spacing-4);
+    }
+
+    .metric-card {
+        padding: var(--spacing-5);
+    }
+
+    .metric-value {
+        font-size: 1.875rem;
+    }
+
+    .metric-value.dual {
+        font-size: 1.5rem;
+    }
+
+    .chart-container {
+        height: 250px;
+    }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-4);
+    }
+
+    .dashboard-charts {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-3);
+    }
+
+    .chart-container.compact canvas {
+        height: 150px;
+    }
+
+    /* Distribution chart responsive adjustments */
+    .chart-container.compact:has(#distributionChart) {
+        min-height: 150px;
+        max-height: 180px;
+        padding: var(--spacing-2);
+    }
+
+    .distribution-chart-wrapper {
+        max-width: 150px;
+        max-height: 150px;
+    }
+
+    .dashboard-table-wrapper {
+        max-height: 250px;
+    }
+
+    /* Charts */
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    /* Table Actions */
+    .table-actions {
+        flex-direction: column;
+        gap: var(--spacing-2);
+        align-items: stretch;
+    }
+
+    .search-box input {
+        width: 100%;
+    }
+
+    /* Modal */
+    .modal-content {
+        width: 95vw;
+        margin: var(--spacing-4);
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Mobile Styles */
+@media (max-width: 480px) {
+    .container {
+        padding: 0 var(--spacing-2);
+    }
+
+    /* Typography Scale Down */
+    .upload-header h2 {
+        font-size: var(--font-size-2xl);
+    }
+
+    .logo h1 {
+        font-size: var(--font-size-xl);
+    }
+
+    /* Header */
+    .header-content {
+        padding: var(--spacing-3) 0;
+    }
+
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Upload */
+    .upload-container {
+        padding: var(--spacing-4);
+    }
+
+    .upload-area {
+        padding: var(--spacing-6);
+    }
+
+    .upload-content h3 {
+        font-size: var(--font-size-lg);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(8, 1fr);
+        gap: var(--spacing-3);
+    }
+
+    .metric-card {
+        padding: var(--spacing-4);
+    }
+
+    .metric-value {
+        font-size: var(--font-size-xl);
+    }
+
+    .metric-value.dual {
+        font-size: var(--font-size-lg);
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    /* Mobile distribution chart adjustments */
+    .chart-container.compact:has(#distributionChart) {
+        min-height: 120px;
+        max-height: 150px;
+        padding: var(--spacing-1);
+    }
+
+    .distribution-chart-wrapper {
+        max-width: 120px;
+        max-height: 120px;
+    }
+
+    .chart-controls {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .btn-chart {
+        width: 100%;
+    }
+
+    /* Table */
+    .trades-table {
+        font-size: var(--font-size-sm);
+    }
+
+    .trades-table th,
+    .trades-table td {
+        padding: var(--spacing-2) var(--spacing-3);
+    }
+
+    /* Hide less important columns on mobile */
+    .trades-table .hide-mobile {
+        display: none;
+    }
+
+    /* Stack table pagination */
+    .table-pagination {
+        flex-direction: column;
+        gap: var(--spacing-3);
+        align-items: center;
+    }
+
+    /* Trade History Performance Table */
+    .trade-history-performance-section .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-4);
+    }
+
+    .trade-history-performance-section .table-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: var(--spacing-3);
+    }
+
+    .trade-history-performance-section .search-box {
+        width: 100%;
+    }
+
+    .trade-history-performance-section .search-box input {
+        width: 100%;
+        min-width: auto;
+    }
+
+    .trade-history-performance-section select {
+        width: 100%;
+    }
+
+    .trade-history-table {
+        font-size: var(--font-size-sm);
+    }
+
+    .trade-history-table th,
+    .trade-history-table td {
+        padding: var(--spacing-2) var(--spacing-3);
+    }
+
+    /* Hide less important columns on mobile for trade history */
+    .trade-history-table th:nth-child(4),
+    /* Entry */
+    .trade-history-table td:nth-child(4),
+    .trade-history-table th:nth-child(5),
+    /* Exit */
+    .trade-history-table td:nth-child(5),
+    .trade-history-table th:nth-child(6),
+    /* Quantity */
+    .trade-history-table td:nth-child(6),
+    .trade-history-table th:nth-child(9),
+    /* Duration */
+    .trade-history-table td:nth-child(9) {
+        display: none;
+    }
+
+    .trade-history-pagination {
+        flex-direction: column;
+        gap: var(--spacing-3);
+    }
+
+    /* Modal */
+    .modal-content {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        margin: 0;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: var(--spacing-4);
+    }
+
+    /* Toast notifications */
+    .toast-container {
+        left: var(--spacing-2);
+        right: var(--spacing-2);
+        top: var(--spacing-2);
+    }
+
+    .toast {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+/* Large Desktop */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1400px;
+    }
+
+    /* Summary Cards */
+    .summary-cards {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* Charts */
+    .charts-section {
+        grid-template-columns: 3fr 2fr;
+    }
+
+    .chart-container canvas {
+        height: 350px;
+    }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+
+    .logo i,
+    .upload-content i {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .spinner {
+        animation: none;
+        border: 4px solid var(--primary-color);
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    :root {
+        --border-light: #000000;
+        --border-medium: #000000;
+        --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-outline {
+        border-width: 2px;
+    }
+
+    .format-card {
+        border-width: 3px;
+    }
+}
+
+/* Print Styles */
+@media print {
+
+    .header,
+    .upload-section,
+    .charts-section,
+    .table-actions,
+    .table-pagination,
+    .modal,
+    .loading-overlay,
+    .toast-container {
+        display: none !important;
+    }
+
+    .trades-section {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+
+    .trades-table {
+        font-size: 12px;
+    }
+
+    .trades-table th,
+    .trades-table td {
+        padding: 4px 8px;
+        border: 1px solid #000;
+    }
+
+    .summary-cards {
+        display: flex;
+        justify-content: space-between;
+        page-break-inside: avoid;
+    }
+
+    .summary-card {
+        box-shadow: none;
+        border: 1px solid #000;
+        flex: 1;
+        margin-right: 10px;
+    }
+
+    .summary-card:last-child {
+        margin-right: 0;
+    }
+}
+
+/* Landscape Orientation on Mobile */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    .upload-area {
+        padding: var(--spacing-4);
+    }
+
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-3);
+    }
+
+    .dashboard-charts {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-2);
+    }
+
+    .chart-container.compact {
+        padding: var(--spacing-3);
+    }
+
+    .chart-container.compact canvas {
+        height: 120px;
+    }
+
+    /* Landscape distribution chart adjustments */
+    .chart-container.compact:has(#distributionChart) {
+        min-height: 100px;
+        max-height: 120px;
+        padding: var(--spacing-1);
+    }
+
+    .distribution-chart-wrapper {
+        max-width: 100px;
+        max-height: 100px;
+    }
+
+    .dashboard-table-container {
+        margin-top: var(--spacing-3);
+    }
+
+    .dashboard-table-wrapper {
+        max-height: 200px;
+    }
+
+    .dashboard-table {
+        font-size: 12px;
+    }
+
+    .dashboard-table th,
+    .dashboard-table td {
+        padding: var(--spacing-1) var(--spacing-2);
+    }
+
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container canvas {
+        height: 200px;
+    }
+}
+
+/* Focus Styles for Accessibility */
+.btn:focus,
+.search-box input:focus,
+.filter-dropdown select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Keyboard Navigation */
+.trades-table tbody tr:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+}
+
+/* Touch Target Improvements */
+@media (pointer: coarse) {
+    .btn {
+        min-height: 44px;
+        padding: var(--spacing-3) var(--spacing-4);
+    }
+
+    .trades-table th,
+    .trades-table td {
+        min-height: 44px;
+        padding: var(--spacing-3) var(--spacing-4);
+    }
+
+    .format-card {
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+}

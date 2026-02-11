@@ -1,0 +1,77 @@
+{
+    "name": "tradle-trading-journal",
+    "version": "1.0.0",
+    "description": "Beautiful trading journal web application for analyzing TradingView CSV data with advanced analytics and performance metrics",
+    "main": "index.html",
+    "scripts": {
+        "dev": "npx live-server --port=3000 --host=localhost --open=/index.html",
+        "build": "npm run optimize",
+        "optimize": "npm run optimize:html && npm run optimize:css && npm run optimize:js",
+        "optimize:html": "html-minifier-terser --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true index.html -o dist/index.html",
+        "optimize:css": "npm run optimize:css:style && npm run optimize:css:responsive",
+        "optimize:css:style": "uglifycss css/style.css > dist/css/style.css",
+        "optimize:css:responsive": "uglifycss css/responsive.css > dist/css/responsive.css",
+        "optimize:js": "npm run optimize:js:main && npm run optimize:js:ui && npm run optimize:js:parser && npm run optimize:js:calculator",
+        "optimize:js:main": "terser js/main.js --compress --mangle --output dist/js/main.js",
+        "optimize:js:ui": "terser js/ui.js --compress --mangle --output dist/js/ui.js",
+        "optimize:js:parser": "terser js/csvParser.js --compress --mangle --output dist/js/csvParser.js",
+        "optimize:js:calculator": "terser js/tradeCalculator.js --compress --mangle --output dist/js/tradeCalculator.js",
+        "lighthouse": "lhci autorun",
+        "test": "npm run validate:html && npm run test:lighthouse",
+        "validate:html": "html-validate index.html",
+        "test:lighthouse": "lighthouse http://localhost:3000 --output=json --output-path=./lighthouse-report.json",
+        "serve": "npx live-server --port=3000",
+        "deploy": "gh-pages -d dist",
+        "start": "npm run dev",
+        "preview": "npm run build && npm run serve"
+    },
+    "keywords": [
+        "trading",
+        "journal",
+        "analytics",
+        "tradingview",
+        "csv",
+        "parser",
+        "financial",
+        "trading-analysis",
+        "portfolio",
+        "performance",
+        "metrics",
+        "charts",
+        "dashboard",
+        "web-application",
+        "javascript",
+        "frontend"
+    ],
+    "author": "Tradle Team",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/gabrieletupini/tradle-app.git"
+    },
+    "homepage": "https://gabrieletupini.github.io/tradle-app",
+    "bugs": {
+        "url": "https://github.com/gabrieletupini/tradle-app/issues"
+    },
+    "devDependencies": {
+        "@lhci/cli": "^0.12.0",
+        "gh-pages": "^6.0.0",
+        "html-minifier-terser": "^7.2.0",
+        "html-validate": "^8.7.4",
+        "lighthouse": "^11.3.0",
+        "live-server": "^1.2.2",
+        "terser": "^5.16.0",
+        "uglifycss": "^0.0.29"
+    },
+    "dependencies": {},
+    "engines": {
+        "node": ">=16.0.0",
+        "npm": ">=8.0.0"
+    },
+    "browserslist": [
+        "> 1%",
+        "last 2 versions",
+        "not dead",
+        "not ie 11"
+    ]
+}

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradle - Trading Journal</title>
+    <meta name="description" content="Beautiful trading journal web application for analyzing TradingView CSV data">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo">
+                        <i class="fas fa-chart-line"></i>
+                        <h1>Tradle</h1>
+                        <span class="tagline">Trading Journal</span>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-outline" id="darkModeToggle">
+                            <i class="fas fa-moon"></i>
+                            <span>Dark Mode</span>
+                        </button>
+                        <button class="btn btn-primary" id="loadSampleBtn">
+                            <i class="fas fa-database"></i>
+                            <span>Load Sample</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+
+                <!-- Navigation Tabs -->
+                <nav class="nav-tabs">
+                    <button class="nav-tab active" data-tab="dashboard">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="nav-tab" data-tab="import">
+                        <i class="fas fa-upload"></i>
+                        <span>Import Data</span>
+                    </button>
+                    <button class="nav-tab" data-tab="export">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                    </button>
+                </nav>
+
+                <!-- Dashboard Section (Default Active) -->
+                <section class="dashboard-section tab-content active" id="dashboardSection">
+
+                    <!-- Liquidity Bar -->
+                    <div class="liquidity-bar">
+                        <div class="liquidity-item">
+                            <label for="startingLiquidity"><i class="fas fa-wallet"></i> Starting Liquidity</label>
+                            <div class="liquidity-input-wrapper">
+                                <span class="liquidity-currency">$</span>
+                                <input type="number" id="startingLiquidity" min="0" step="100" placeholder="100000" />
+                            </div>
+                        </div>
+                        <div class="liquidity-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="liquidity-item liquidity-current">
+                            <label><i class="fas fa-chart-line"></i> Current Liquidity</label>
+                            <div class="liquidity-value" id="currentLiquidity">$0.00</div>
+                        </div>
+                        <div class="liquidity-item liquidity-return">
+                            <label>Return</label>
+                            <div class="liquidity-value" id="liquidityReturn">0.00%</div>
+                        </div>
+                    </div>
+
+                    <!-- Trademetria-Style Metric Cards Grid -->
+                    <div class="metrics-grid">
+                        <!-- Row 1: Revenue & Averages -->
+                        <div class="metric-card net-revenue">
+                            <div class="metric-header">
+                                <h3>Net Revenue</h3>
+                                <div class="trend-indicator positive" id="netRevenueTrend">
+                                    <i class="fas fa-arrow-up"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value" id="netRevenue">$0.00</div>
+                            <div class="metric-change" id="netRevenueChange">+0.00%</div>
+                        </div>
+
+                        <div class="metric-card daily-average">
+                            <div class="metric-header">
+                                <h3>Daily Net Average</h3>
+                                <div class="trend-indicator positive" id="dailyAvgTrend">
+                                    <i class="fas fa-arrow-up"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value" id="dailyNetAverage">$0.00</div>
+                            <div class="metric-change" id="dailyAvgChange">+0.00%</div>
+                        </div>
+
+                        <div class="metric-card gross-revenue">
+                            <div class="metric-header">
+                                <h3>Gross Revenue</h3>
+                                <div class="trend-indicator positive" id="grossRevenueTrend">
+                                    <i class="fas fa-arrow-up"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value" id="grossRevenue">$0.00</div>
+                            <div class="metric-change" id="grossRevenueChange">+0.00%</div>
+                        </div>
+
+                        <div class="metric-card daily-gross-average">
+                            <div class="metric-header">
+                                <h3>Daily Gross Average</h3>
+                                <div class="trend-indicator positive" id="dailyGrossTrend">
+                                    <i class="fas fa-arrow-up"></i>
+                                </div>
+                            </div>
+                            <div class="metric-value" id="dailyGrossAverage">$0.00</div>
+                            <div class="metric-change" id="dailyGrossChange">+0.00%</div>
+                        </div>
+
+                        <div class="metric-card total-commissions">
+                            <div class="metric-header">
+                                <h3>Total Commissions</h3>
+                                <div class="metric-badges">
+                                    <span class="badge neutral" id="commissionRateBadge">$2.50/contract</span>
+                                </div>
+                            </div>
+                            <div class="metric-value" id="totalCommissions">$0.00</div>
+                            <div class="metric-subtext" id="commissionNote">TradingView paper trading rate</div>
+                        </div>
+
+                        <!-- Row 2: Performance Metrics -->
+                        <div class="metric-card profit-factor">
+                            <div class="metric-header">
+                                <h3>Profit Factor Net/Gross</h3>
+                                <div class="metric-badges">
+                                    <span class="badge good" id="profitFactorBadge">Good</span>
+                                </div>
+                            </div>
+                            <div class="metric-value dual" id="profitFactor">0.00 / 0.00</div>
+                            <div class="metric-subtext" id="profitFactorAdvice">Increase risk</div>
+                        </div>
+
+                        <div class="metric-card expectancy">
+                            <div class="metric-header">
+                                <h3>Expectancy</h3>
+                                <div class="metric-badges">
+                                    <span class="badge good" id="expectancyBadge">Good</span>
+                                </div>
+                            </div>
+                            <div class="metric-value" id="expectancyValue">$0.00</div>
+                            <div class="metric-subtext" id="expectancyAdvice">Increase risk</div>
+                        </div>
+
+                        <div class="metric-card win-rate">
+                            <div class="metric-header">
+                                <h3>Win Rate</h3>
+                                <div class="metric-badges">
+                                    <span class="win-badge" id="winBadge">0 W</span>
+                                    <span class="loss-badge" id="lossBadge">0 L</span>
+                                </div>
+                            </div>
+                            <div class="metric-value percentage" id="winRateValue">0.00%</div>
+                            <div class="metric-subtext" id="winRateRatio">0 wins / 0 total</div>
+                        </div>
+
+                        <div class="metric-card daily-win-rate">
+                            <div class="metric-header">
+                                <h3>Daily Win Rate</h3>
+                                <div class="metric-badges">
+                                    <span class="win-badge" id="dailyWinBadge">0 W</span>
+                                    <span class="loss-badge" id="dailyLossBadge">0 L</span>
+                                </div>
+                            </div>
+                            <div class="metric-value percentage" id="dailyWinRate">0.00%</div>
+                            <div class="metric-subtext" id="dailyWinRatio">0 days won / 0 total</div>
+                        </div>
+                    </div>
+
+                    <!-- PnL Evolution Chart -->
+                    <div class="pnl-evolution">
+                        <div class="chart-header">
+                            <h3>PnL Evolution</h3>
+                            <div class="chart-controls">
+                                <button class="btn-chart active" data-period="all">All Time</button>
+                                <button class="btn-chart" data-period="30d">30D</button>
+                                <button class="btn-chart" data-period="7d">7D</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="pnlEvolutionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Trading Calendar -->
+                    <div class="trading-calendar-section">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Your Current Month So Far</h3>
+                            <div class="calendar-controls">
+                                <div class="daily-goal-input">
+                                    <label for="dailyGoalInput"><i class="fas fa-bullseye"></i> Daily Goal</label>
+                                    <div class="goal-input-wrapper">
+                                        <span class="goal-currency">$</span>
+                                        <input type="number" id="dailyGoalInput" min="0" step="50" placeholder="500" />
+                                    </div>
+                                </div>
+                                <div class="calendar-nav">
+                                    <button class="btn-calendar-nav" id="calendarPrevMonth"><i
+                                            class="fas fa-chevron-left"></i></button>
+                                    <span class="calendar-month-label" id="calendarMonthLabel"></span>
+                                    <button class="btn-calendar-nav" id="calendarNextMonth"><i
+                                            class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="calendar-grid" id="tradingCalendarGrid">
+                            <!-- Calendar will be generated by JS -->
+                        </div>
+                        <div class="calendar-summary" id="calendarSummary">
+                            <!-- Summary footer will be generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Layout Grid -->
+                    <div class="dashboard-grid">
+                        <!-- Charts Section -->
+                        <div class="dashboard-charts">
+                            <div class="chart-container compact">
+                                <h3>Performance Chart</h3>
+                                <canvas id="performanceChart"></canvas>
+                            </div>
+                            <div class="chart-container compact">
+                                <h3>Win/Loss Distribution</h3>
+                                <canvas id="distributionChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Today's Trades Table -->
+                        <div class="dashboard-trades">
+                            <div class="dashboard-table-container">
+                                <div class="dashboard-table-header">
+                                    <div>
+                                        <h3>Today's Trades</h3>
+                                        <span class="dashboard-table-subtitle" id="todayTradesSubtitle"></span>
+                                    </div>
+                                    <a href="#" class="view-all-link"
+                                        onclick="document.querySelector('.trades-section').scrollIntoView({behavior: 'smooth'})">View
+                                        All</a>
+                                </div>
+                                <div class="dashboard-table-wrapper">
+                                    <table class="dashboard-table" id="dashboardTradesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Symbol</th>
+                                                <th>Side</th>
+                                                <th>Entry → Exit</th>
+                                                <th>Return</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dashboardTradesBody">
+                                            <tr class="no-data">
+                                                <td colspan="6">No trades loaded yet</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trades Table -->
+                    <div class="trades-section">
+                        <div class="section-header">
+                            <h3>Trade History</h3>
+                            <div class="table-actions">
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="tradeSearch" placeholder="Search trades...">
+                                </div>
+                                <div class="filter-dropdown">
+                                    <select id="statusFilter">
+                                        <option value="">All Status</option>
+                                        <option value="WIN">Wins Only</option>
+                                        <option value="LOSE">Losses Only</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-outline" id="exportBtn">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="trades-table" id="tradesTable">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="date">Date <i class="fas fa-sort"></i></th>
+                                        <th data-sort="symbol">Symbol</th>
+                                        <th data-sort="side">Side</th>
+                                        <th data-sort="quantity">Qty</th>
+                                        <th data-sort="entry">Entry</th>
+                                        <th data-sort="exit">Exit</th>
+                                        <th data-sort="return">P&L</th>
+                                        <th data-sort="status">Status</th>
+                                        <th data-sort="margin">Margin</th>
+                                        <th>Notes</th>
+                                        <th>Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tradesTableBody">
+                                    <!-- Trading data will appear here after upload -->
+                                    <tr class="no-data-row">
+                                        <td colspan="11">
+                                            <div class="no-data-message">
+                                                <i class="fas fa-upload"></i>
+                                                <h4>No Trading Data</h4>
+                                                <p>Upload your TradingView CSV file in the <strong>Import Data</strong>
+                                                    tab to see your trades here, or <strong>Load Sample</strong> to try
+                                                    the demo.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="table-pagination" id="tablePagination">
+                            <div class="pagination-info">
+                                Showing <span id="paginationStart">0</span>-<span id="paginationEnd">0</span> of <span
+                                    id="paginationTotal">0</span> trades
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="btn btn-outline" id="prevPage" disabled>
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <span class="page-numbers" id="pageNumbers"></span>
+                                <button class="btn btn-outline" id="nextPage" disabled>
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Import Section -->
+                <section class="import-section tab-content" id="importSection" style="display: none;">
+                    <!-- Step 1: Format Selection -->
+                    <div class="format-selection-container" id="formatSelectionContainer">
+                        <div class="format-selection-header">
+                            <h2>Select Your Data Format</h2>
+                            <p>Choose the source of your trading data to get started</p>
+                        </div>
+
+                        <div class="format-cards">
+                            <div class="format-card tradingview-card" id="tradingviewFormatCard">
+                                <div class="card-icon">
+                                    <i class="fas fa-chart-candlestick"></i>
+                                </div>
+                                <div class="card-content">
+                                    <h3>TradingView Paper Account</h3>
+                                    <p>Upload CSV exports from TradingView paper trading</p>
+                                    <div class="card-features">
+                                        <span class="feature-item">
+                                            <i class="fas fa-check"></i>
+                                            Order history support
+                                        </span>
+                                        <span class="feature-item">
+                                            <i class="fas fa-check"></i>
+                                            Automatic P&L calculation
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="select-format-btn" id="selectTradingViewBtn">
+                                    <i class="fas fa-arrow-right"></i>
+                                    Select TradingView
+                                </button>
+                            </div>
+
+                            <div class="format-card coming-soon-card">
+                                <div class="card-icon">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="card-content">
+                                    <h3>Other Brokers</h3>
+                                    <p>Additional broker formats and integrations</p>
+                                    <div class="card-features">
+                                        <span class="feature-item">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            Interactive Brokers
+                                        </span>
+                                        <span class="feature-item">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            TD Ameritrade
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="select-format-btn" disabled>
+                                    <i class="fas fa-clock"></i>
+                                    Coming Soon
+                                </button>
+                            </div>
+
+                            <div class="format-card custom-card">
+                                <div class="card-icon">
+                                    <i class="fas fa-cog"></i>
+                                </div>
+                                <div class="card-content">
+                                    <h3>Custom Format</h3>
+                                    <p>Upload custom CSV with your own column mapping</p>
+                                    <div class="card-features">
+                                        <span class="feature-item">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            Column mapping
+                                        </span>
+                                        <span class="feature-item">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            Flexible parsing
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="select-format-btn" disabled>
+                                    <i class="fas fa-clock"></i>
+                                    Coming Soon
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: TradingView Upload Interface -->
+                    <div class="tradingview-upload-container" id="tradingviewUploadContainer" style="display: none;">
+                        <div class="upload-header">
+                            <button class="back-btn" id="backToFormatSelection">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>Back to Format Selection</span>
+                            </button>
+                            <h2>Upload TradingView Paper Account CSV</h2>
+                            <p>Upload your paper trading order history export from TradingView</p>
+                        </div>
+
+                        <div class="format-info-card">
+                            <div class="format-info-header">
+                                <i class="fas fa-info-circle"></i>
+                                <h3>Expected CSV Format</h3>
+                            </div>
+                            <div class="format-info-content">
+                                <p><strong>Required columns:</strong></p>
+                                <div class="column-list">
+                                    <span class="column-item">Symbol</span>
+                                    <span class="column-item">Side</span>
+                                    <span class="column-item">Type</span>
+                                    <span class="column-item">Qty</span>
+                                    <span class="column-item">Fill Price</span>
+                                    <span class="column-item">Status</span>
+                                    <span class="column-item">Placing Time</span>
+                                </div>
+                                <div class="export-instructions">
+                                    <p><strong>How to export from TradingView:</strong></p>
+                                    <ol>
+                                        <li>Go to your TradingView Paper Trading account</li>
+                                        <li>Navigate to the "Orders" or "History" section</li>
+                                        <li>Click "Export" and select CSV format</li>
+                                        <li>Upload the downloaded file here</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TradingView-specific Upload Area -->
+                        <div class="upload-area tradingview-upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <div class="upload-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <h3>Drag & drop your TradingView CSV file here</h3>
+                                <p>or <span class="upload-link">browse to choose a file</span></p>
+                                <input type="file" id="csvFileInput" accept=".csv" hidden>
+                                <div class="file-requirements">
+                                    <div class="requirement-item">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>TradingView CSV format</span>
+                                    </div>
+                                    <div class="requirement-item">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Maximum file size: 10MB</span>
+                                    </div>
+                                    <div class="requirement-item">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Paper trading history only</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Status -->
+                        <div class="upload-status" id="uploadStatus" style="display: none;">
+                            <div class="status-content">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span class="status-text">Processing your TradingView file...</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Export Section -->
+                <section class="export-section tab-content" id="exportSection" style="display: none;">
+                    <div class="export-container">
+                        <div class="export-header">
+                            <h2>Export Your Trading Data</h2>
+                            <p>Download your analyzed trading data in various formats</p>
+                        </div>
+
+                        <div class="export-options">
+                            <div class="export-card">
+                                <div class="card-icon">
+                                    <i class="fas fa-file-csv"></i>
+                                </div>
+                                <h3>CSV Export</h3>
+                                <p>Export all trades with calculated metrics</p>
+                                <button class="btn btn-primary" id="exportCsvBtn">
+                                    <i class="fas fa-download"></i>
+                                    Download CSV
+                                </button>
+                            </div>
+
+                            <div class="export-card">
+                                <div class="card-icon">
+                                    <i class="fas fa-chart-bar"></i>
+                                </div>
+                                <h3>Performance Report</h3>
+                                <p>Detailed analysis report with charts</p>
+                                <button class="btn btn-primary" id="exportReportBtn">
+                                    <i class="fas fa-download"></i>
+                                    Download Report
+                                </button>
+                            </div>
+
+                            <div class="export-card">
+                                <div class="card-icon">
+                                    <i class="fas fa-file-pdf"></i>
+                                </div>
+                                <h3>PDF Summary</h3>
+                                <p>Professional trading summary (coming soon)</p>
+                                <button class="btn btn-outline" disabled>
+                                    <i class="fas fa-hourglass-half"></i>
+                                    Coming Soon
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Export Status -->
+                        <div class="export-status" id="exportStatus" style="display: none;">
+                            <div class="status-content">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span class="status-text">Preparing export...</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Day Trades Modal (Calendar Day Drill-down) -->
+        <div class="modal day-trades-modal" id="chartModal">
+            <div class="modal-content day-trades-modal-content">
+                <div class="modal-header">
+                    <h3 id="chartModalTitle"><i class="fas fa-calendar-day"></i> Trades</h3>
+                    <button class="modal-close" id="chartModalClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="chartModalTrades">
+                    <!-- Trade cards will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade Detail Modal -->
+        <div class="modal" id="tradeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Trade Details</h3>
+                    <button class="modal-close" id="modalClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Trade details will be inserted here -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" id="saveTradeNotes">
+                        <i class="fas fa-save"></i>
+                        Save Notes
+                    </button>
+                    <button class="btn btn-primary" id="closeModal">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h3>Processing your data...</h3>
+                <p>Analyzing trades and calculating metrics</p>
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/csvParser.js?v=3"></script>
+    <script src="js/tradeCalculator.js?v=3"></script>
+    <script src="js/ui.js?v=3"></script>
+    <script src="js/main.js?v=3"></script>
+
+    <script>
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function () {
+            window.tradleApp = new TradleApp();
+        });
+    </script>
+</body>
+
+</html>

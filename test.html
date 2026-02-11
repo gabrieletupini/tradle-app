@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradle Test</title>
+</head>
+
+<body>
+    <h1>Tradle Test</h1>
+    <button id="loadSampleData">Load Sample Data</button>
+    <div id="output"></div>
+
+    <script>
+        // Test to see if the issue is with the main files
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Test page loaded');
+
+            const btn = document.getElementById('loadSampleData');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    console.log('Button clicked successfully!');
+                    document.getElementById('output').innerHTML = 'Button works!';
+                });
+            } else {
+                console.log('Button not found');
+            }
+        });
+    </script>
+</body>
+
+</html>
