@@ -497,26 +497,6 @@ class TradeCalculator {
     }
 
     /**
-     * Get chart data for performance visualization
-     */
-    getPerformanceChartData(trades) {
-        const chartData = [];
-        let runningTotal = 0;
-
-        trades.forEach((trade, index) => {
-            runningTotal += trade.netProfit;
-            chartData.push({
-                x: index + 1,
-                y: runningTotal,
-                trade: trade,
-                label: `Trade ${index + 1}: ${trade.status} $${trade.netProfit.toFixed(2)}`
-            });
-        });
-
-        return chartData;
-    }
-
-    /**
      * Get distribution data for pie chart
      */
     getDistributionChartData(trades) {
