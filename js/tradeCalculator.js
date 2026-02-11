@@ -1,13 +1,43 @@
 /**
- * Trade Calculator for E-mini S&P 500 Futures
- * Implements the calculation logic from the existing trading tools
+ * Trade Calculator for Futures Contracts
+ * Supports multiple symbols dynamically via CONTRACT_SPECS registry
  */
 class TradeCalculator {
     constructor() {
-        // E-mini S&P 500 contract specifications
-        this.contractMultiplier = 50; // $50 per point
-        this.commissionPerTrade = 2.5; // Per contract per side
-        this.contractSymbol = 'CME_MINI:ES1!';
+        // Contract specifications registry — add new symbols here
+        this.CONTRACT_SPECS = {
+            'ES1!': { multiplier: 50, commission: 2.50, name: 'E-mini S&P 500' },
+            'MES1!': { multiplier: 5, commission: 0.62, name: 'Micro E-mini S&P 500' },
+            'NQ1!': { multiplier: 20, commission: 2.50, name: 'E-mini Nasdaq-100' },
+            'MNQ1!': { multiplier: 2, commission: 0.62, name: 'Micro E-mini Nasdaq-100' },
+            'YM1!': { multiplier: 5, commission: 2.50, name: 'E-mini Dow' },
+            'MYM1!': { multiplier: 0.50, commission: 0.62, name: 'Micro E-mini Dow' },
+            'RTY1!': { multiplier: 50, commission: 2.50, name: 'E-mini Russell 2000' },
+            'M2K1!': { multiplier: 5, commission: 0.62, name: 'Micro E-mini Russell 2000' },
+            'CL1!': { multiplier: 1000, commission: 2.50, name: 'Crude Oil' },
+            'MCL1!': { multiplier: 100, commission: 0.62, name: 'Micro Crude Oil' },
+            'GC1!': { multiplier: 100, commission: 2.50, name: 'Gold' },
+            'MGC1!': { multiplier: 10, commission: 0.62, name: 'Micro Gold' },
+            'SI1!': { multiplier: 5000, commission: 2.50, name: 'Silver' },
+            'NG1!': { multiplier: 10000, commission: 2.50, name: 'Natural Gas' },
+            'ZB1!': { multiplier: 1000, commission: 2.50, name: '30-Year T-Bond' },
+            'ZN1!': { multiplier: 1000, commission: 2.50, name: '10-Year T-Note' },
+            '6E1!': { multiplier: 125000, commission: 2.50, name: 'Euro FX' },
+            '6J1!': { multiplier: 12500000, commission: 2.50, name: 'Japanese Yen' },
+        };
+
+        // Default specs for unknown symbols
+        this.DEFAULT_SPECS = { multiplier: 1, commission: 0, name: 'Unknown' };
+    }
+
+    /**
+     * Look up contract specs for a given symbol string.
+     * Strips exchange prefixes like "CME_MINI:" before matching.
+     */
+    getContractSpecs(symbolRaw) {
+        if (!symbolRaw) return this.DEFAULT_SPECS;
+        const stripped = symbolRaw.replace(/^[A-Z_]+:/, ''); // "CME_MINI:ES1!" → "ES1!"
+        return this.CONTRACT_SPECS[stripped] || this.DEFAULT_SPECS;
     }
 
     /**
@@ -130,8 +160,7 @@ class TradeCalculator {
             order1.qty === order2.qty &&
             order1.status === 'Filled' &&
             order2.status === 'Filled' &&
-            order1.symbol === order2.symbol &&
-            order1.symbol.includes('ES1!')
+            order1.symbol === order2.symbol
         );
     }
 
@@ -177,16 +206,19 @@ class TradeCalculator {
         const { entryPrice, exitPrice, quantity } = trade;
         const side = trade.side || 'LONG';
 
-        // E-mini S&P 500 profit calculation
+        // Look up contract specs from the trade's actual symbol
+        const specs = this.getContractSpecs(trade.contract);
+
+        // Profit calculation (works for any futures contract)
         // LONG:  (Exit - Entry) × Qty × Multiplier  (buy low, sell high)
         // SHORT: (Entry - Exit) × Qty × Multiplier  (sell high, buy low)
         const pointDifference = side === 'SHORT'
             ? entryPrice - exitPrice
             : exitPrice - entryPrice;
-        const grossProfit = pointDifference * quantity * this.contractMultiplier;
+        const grossProfit = pointDifference * quantity * specs.multiplier;
 
         // Commission calculation (per contract per side, so multiply by 2)
-        const totalCommission = this.commissionPerTrade * quantity * 2;
+        const totalCommission = specs.commission * quantity * 2;
         const netProfit = grossProfit - totalCommission;
 
         // Determine win/loss status
@@ -215,11 +247,11 @@ class TradeCalculator {
             boughtDate: this.formatDateTime(trade.entryTime),
             soldDate: this.formatDateTime(trade.exitTime),
             side: trade.side || 'LONG',
-            contract: this.contractSymbol,
+            contract: trade.contract || trade.entryOrder?.symbol || 'Unknown',
             entry: entryPrice,
             exit: exitPrice,
             return: returnValue,
-            commission: this.commissionPerTrade,
+            commission: specs.commission,
             currency: 'USD',
             images: '-',
             notes: '',

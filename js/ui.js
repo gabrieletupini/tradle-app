@@ -391,11 +391,12 @@ class UIController {
         this.updateElement('winBadge', `${safeSummary.winCount || 0} W`);
         this.updateElement('lossBadge', `${safeSummary.lossCount || 0} L`);
 
-        // Daily win rate (simplified as total win rate for now)
-        this.updateElement('dailyWinRate', `${(safeSummary.winRate || 0).toFixed(2)}%`);
-        this.updateElement('dailyWinRatio', `${tradingDays} days trading`);
-        this.updateElement('dailyWinBadge', `${Math.ceil(tradingDays * (safeSummary.winRate || 0) / 100)} W`);
-        this.updateElement('dailyLossBadge', `${Math.floor(tradingDays * (100 - (safeSummary.winRate || 0)) / 100)} L`);
+        // Daily win rate — computed from actual day-level P&L
+        const dailyStats = this.calculateDailyWinRate(this.currentTrades || []);
+        this.updateElement('dailyWinRate', `${dailyStats.winRate.toFixed(2)}%`);
+        this.updateElement('dailyWinRatio', `${dailyStats.totalDays} days trading`);
+        this.updateElement('dailyWinBadge', `${dailyStats.winDays} W`);
+        this.updateElement('dailyLossBadge', `${dailyStats.lossDays} L`);
     }
 
     /**
@@ -408,6 +409,30 @@ class UIController {
         const diffTime = Math.abs(end - start);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return Math.max(1, diffDays);
+    }
+
+    /**
+     * Calculate daily win rate from actual per-day P&L
+     * A "winning day" is any day whose net P&L >= 0
+     */
+    calculateDailyWinRate(trades) {
+        if (!trades || trades.length === 0) {
+            return { winRate: 0, winDays: 0, lossDays: 0, totalDays: 0 };
+        }
+
+        const dayMap = this.groupTradesByDay(trades);
+        let winDays = 0;
+        let lossDays = 0;
+
+        Object.values(dayMap).forEach(day => {
+            if (day.pnl >= 0) winDays++;
+            else lossDays++;
+        });
+
+        const totalDays = winDays + lossDays;
+        const winRate = totalDays > 0 ? (winDays / totalDays) * 100 : 0;
+
+        return { winRate, winDays, lossDays, totalDays };
     }
 
     /**
@@ -472,7 +497,7 @@ class UIController {
      * Update charts
      */
     updateCharts(trades, summary) {
-        this.updatePerformanceChart(trades);
+        this.updateCommissionsByDayChart(trades);
         this.updateDistributionChart(summary);
         this.updatePnLEvolutionChart(trades);
     }
@@ -787,7 +812,7 @@ class UIController {
             const qty = trade.quantity ?? trade.qty ?? 1;
             const side = trade.side || 'LONG';
             const duration = trade.duration || '-';
-            const rawSymbol = trade.contract || trade.symbol || 'CME_MINI:ES1!';
+            const rawSymbol = trade.contract || trade.symbol || 'Unknown';
             const tvSymbol = rawSymbol.includes(':') ? rawSymbol : `CME_MINI:${rawSymbol}`;
 
             // Format entry/exit times
@@ -995,57 +1020,165 @@ class UIController {
     }
 
     /**
-     * Update performance chart
+     * Update Commissions by Day chart (bar = commission, line = trade count)
      */
-    updatePerformanceChart(trades) {
-        const ctx = document.getElementById('performanceChart').getContext('2d');
+    updateCommissionsByDayChart(trades) {
+        const ctx = document.getElementById('commissionsByDayChart');
+        if (!ctx) return;
 
-        if (this.charts.performance) {
+        if (this.charts.commissionsByDay) {
             try {
-                this.charts.performance.destroy();
+                this.charts.commissionsByDay.destroy();
             } catch (error) {
-                console.warn('Warning destroying Performance chart:', error);
+                console.warn('Warning destroying Commissions by Day chart:', error);
             }
-            this.charts.performance = null;
+            this.charts.commissionsByDay = null;
         }
 
-        const chartData = this.getPerformanceChartData(trades);
+        const dayData = this.getCommissionsByDayData(trades);
 
-        this.charts.performance = new Chart(ctx, {
-            type: 'line',
+        this.charts.commissionsByDay = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
             data: {
-                labels: chartData.map((_, i) => `Trade ${i + 1}`),
-                datasets: [{
-                    label: 'Cumulative P&L',
-                    data: chartData.map(d => d.y),
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.2
-                }]
+                labels: dayData.labels,
+                datasets: [
+                    {
+                        label: 'Commissions',
+                        data: dayData.commissions,
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        hoverBackgroundColor: 'rgba(239, 68, 68, 0.9)',
+                        borderRadius: 4,
+                        order: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Trades',
+                        data: dayData.tradeCounts,
+                        type: 'line',
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        order: 1,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: {
-                            callback: (value) => this.formatCurrency(value)
-                        }
-                    }
-                },
                 interaction: {
                     intersect: false,
                     mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 12,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (context) => {
+                                if (context.dataset.label === 'Commissions') {
+                                    return `Commissions: ${this.formatCurrency(context.parsed.y)}`;
+                                }
+                                return `Trades: ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#6b7280', font: { size: 10 } }
+                    },
+                    y: {
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Commissions ($)',
+                            color: '#ef4444',
+                            font: { size: 11 }
+                        },
+                        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+                        ticks: {
+                            color: '#6b7280',
+                            callback: (value) => '$' + value
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Trades',
+                            color: '#3b82f6',
+                            font: { size: 11 }
+                        },
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            color: '#6b7280',
+                            stepSize: 1
+                        }
+                    }
                 }
             }
         });
+    }
+
+    /**
+     * Get commissions and trade counts grouped by day
+     */
+    getCommissionsByDayData(trades) {
+        if (!trades || trades.length === 0) {
+            return { labels: [], commissions: [], tradeCounts: [] };
+        }
+
+        const dayMap = {};
+        trades.forEach(trade => {
+            const exitTime = trade.exitTime || trade.soldDate || trade.date;
+            if (!exitTime) return;
+            const d = new Date(exitTime);
+            if (isNaN(d.getTime())) return;
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (!dayMap[key]) dayMap[key] = { commission: 0, trades: 0 };
+            dayMap[key].commission += (trade.totalCommission || 0);
+            dayMap[key].trades += 1;
+        });
+
+        // Sort by date
+        const sortedKeys = Object.keys(dayMap).sort();
+
+        // Format labels as shorter dates (e.g. "Feb 11")
+        const labels = sortedKeys.map(key => {
+            const [y, m, d] = key.split('-');
+            const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        return {
+            labels,
+            commissions: sortedKeys.map(k => parseFloat(dayMap[k].commission.toFixed(2))),
+            tradeCounts: sortedKeys.map(k => dayMap[k].trades)
+        };
     }
 
     /**
@@ -1174,16 +1307,7 @@ class UIController {
         });
     }
 
-    /**
-     * Get performance chart data
-     */
-    getPerformanceChartData(trades) {
-        let runningTotal = 0;
-        return trades.map((trade, index) => {
-            runningTotal += trade.netProfit;
-            return { x: index + 1, y: runningTotal };
-        });
-    }
+    // Performance chart data method removed — replaced by getCommissionsByDayData above
 
     /**
      * Update dashboard trades table with today's trades (or latest trading day)
@@ -1287,7 +1411,7 @@ class UIController {
 
                 row.innerHTML = `
                     <td>${timeStr}</td>
-                    <td>${trade.contract || 'ES1!'}</td>
+                    <td>${trade.contract || trade.symbol || '-'}</td>
                     <td><span class="side side-${(trade.side?.toLowerCase() || 'long')}">${trade.side || 'LONG'}</span></td>
                     <td>${this.formatCurrency(entryPrice)} → ${this.formatCurrency(exitPrice)}</td>
                     <td class="return ${returnClass}">${this.formatCurrency(trade.netProfit || 0)}</td>
@@ -1310,7 +1434,7 @@ class UIController {
         // Create test trade data
         const testTrades = [{
             date: '2026-02-11 17:00:00',
-            contract: 'CME_MINI:ES1!',
+            contract: 'CME_MINI:ES1!', // test data only
             side: 'LONG',
             entry: 6970.75,
             exit: 6976.75,
@@ -1463,7 +1587,7 @@ class UIController {
 
                 row.innerHTML = `
                     <td>${this.formatDate(trade.date || trade.exitTime)}</td>
-                    <td>${trade.contract || trade.symbol || 'ES1!'}</td>
+                    <td>${trade.contract || trade.symbol || '-'}</td>
                     <td><span class="side side-${sideClass}">${trade.side || 'LONG'}</span></td>
                     <td>${this.formatCurrency(trade.entry || trade.entryPrice || 0)}</td>
                     <td>${this.formatCurrency(trade.exit || trade.exitPrice || 0)}</td>
@@ -1953,7 +2077,7 @@ class UIController {
             margin = parseFloat(m) || 0;
         }
 
-        const symbol = trade.contract || trade.symbol || 'ES1!';
+        const symbol = trade.contract || trade.symbol || '-';
 
         return `
             <tr data-trade-id="${trade.id || ''}" class="trade-row">

@@ -85,9 +85,8 @@ class CSVParser {
             try {
                 const values = this.parseCSVLine(line);
 
-                // Only process ES1! orders with valid data (including CME_MINI:ES1!)
-                if (values.length >= headers.length && values[0] &&
-                    (values[0].includes('ES1!') || values[0].includes('CME_MINI:ES1!'))) {
+                // Process any symbol with valid data
+                if (values.length >= headers.length && values[0] && values[0].trim()) {
 
                     const order = this.createOrderObject(values, headers);
 

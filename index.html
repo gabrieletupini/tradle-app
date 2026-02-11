@@ -7,8 +7,26 @@
     <title>Tradle - Trading Journal</title>
     <meta name="description" content="Beautiful trading journal web application for analyzing TradingView CSV data">
 
+    <!-- Open Graph / WhatsApp / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://gabrieletupini.github.io/tradle-app/">
+    <meta property="og:title" content="Tradle - Trading Journal">
+    <meta property="og:description"
+        content="Analyze your TradingView trades with beautiful charts, P&L dashboard, trading calendar & performance metrics.">
+    <meta property="og:image" content="https://gabrieletupini.github.io/tradle-app/assets/images/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tradle - Trading Journal">
+    <meta name="twitter:description"
+        content="Analyze your TradingView trades with beautiful charts, P&L dashboard, trading calendar & performance metrics.">
+    <meta name="twitter:image" content="https://gabrieletupini.github.io/tradle-app/assets/images/og-image.png">
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/images/og-image.png">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -251,8 +269,8 @@
                         <!-- Charts Section -->
                         <div class="dashboard-charts">
                             <div class="chart-container compact">
-                                <h3>Performance Chart</h3>
-                                <canvas id="performanceChart"></canvas>
+                                <h3>Commissions by Day</h3>
+                                <canvas id="commissionsByDayChart"></canvas>
                             </div>
                             <div class="chart-container compact">
                                 <h3>Win/Loss Distribution</h3>
