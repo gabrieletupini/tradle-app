@@ -1319,547 +1319,547 @@ class UIController {
      * Close the day trades modal
      */
     closeDayChartModal() {
-    const modal = document.getElementById('chartModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-}
-
-/**
- * Update PnL Evolution chart (Trademetria-style)
- */
-updatePnLEvolutionChart(trades) {
-    const ctx = document.getElementById('pnlEvolutionChart');
-    if (!ctx) return;
-
-    if (this.charts.pnlEvolution) {
-        try {
-            this.charts.pnlEvolution.destroy();
-        } catch (error) {
-            console.warn('Warning destroying PnL Evolution chart:', error);
+        const modal = document.getElementById('chartModal');
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
         }
-        this.charts.pnlEvolution = null;
     }
 
-    const evolutionData = this.getPnLEvolutionData(trades);
+    /**
+     * Update PnL Evolution chart (Trademetria-style)
+     */
+    updatePnLEvolutionChart(trades) {
+        const ctx = document.getElementById('pnlEvolutionChart');
+        if (!ctx) return;
 
-    this.charts.pnlEvolution = new Chart(ctx.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: evolutionData.labels,
-            datasets: [{
-                label: 'Portfolio Value',
-                data: evolutionData.values,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: '#3b82f6',
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#ffffff',
-                    bodyColor: '#ffffff',
-                    borderColor: '#3b82f6',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: (context) => {
-                            return `Portfolio: ${this.formatCurrency(context.parsed.y)}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    display: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#6b7280',
-                        font: {
-                            size: 11
-                        }
-                    }
-                },
-                y: {
-                    display: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#6b7280',
-                        font: {
-                            size: 11
-                        },
-                        callback: (value) => {
-                            return this.formatCurrency(value);
-                        }
-                    }
-                }
-            },
-            elements: {
-                point: {
-                    hoverRadius: 8
-                }
+        if (this.charts.pnlEvolution) {
+            try {
+                this.charts.pnlEvolution.destroy();
+            } catch (error) {
+                console.warn('Warning destroying PnL Evolution chart:', error);
             }
+            this.charts.pnlEvolution = null;
         }
-    });
 
-    this.setupChartControls();
-}
+        const evolutionData = this.getPnLEvolutionData(trades);
 
-/**
- * Get PnL evolution data for chart
- */
-getPnLEvolutionData(trades) {
-    if (!trades || trades.length === 0) {
-        return { labels: ['Start'], values: [0] };
-    }
-
-    const labels = ['Start'];
-    const values = [0];
-    let cumulativePnL = 0;
-
-    trades.forEach((trade, index) => {
-        cumulativePnL += trade.netProfit || 0;
-        labels.push(`Trade ${index + 1}`);
-        values.push(cumulativePnL);
-    });
-
-    return { labels, values };
-}
-
-/**
- * Setup chart period controls
- */
-setupChartControls() {
-    const chartButtons = document.querySelectorAll('.btn-chart');
-    chartButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            // Remove active class from all buttons
-            chartButtons.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked button
-            e.target.classList.add('active');
-
-            // You can implement period filtering here
-            const period = e.target.dataset.period;
-            console.log(`Switching to ${period} view`);
-        });
-    });
-}
-
-/**
- * Update Commissions by Day chart (bar = commission, line = trade count)
- */
-updateCommissionsByDayChart(trades) {
-    const ctx = document.getElementById('commissionsByDayChart');
-    if (!ctx) return;
-
-    if (this.charts.commissionsByDay) {
-        try {
-            this.charts.commissionsByDay.destroy();
-        } catch (error) {
-            console.warn('Warning destroying Commissions by Day chart:', error);
-        }
-        this.charts.commissionsByDay = null;
-    }
-
-    const dayData = this.getCommissionsByDayData(trades);
-
-    this.charts.commissionsByDay = new Chart(ctx.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: dayData.labels,
-            datasets: [
-                {
-                    label: 'Commissions',
-                    data: dayData.commissions,
-                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                    hoverBackgroundColor: 'rgba(239, 68, 68, 0.9)',
-                    borderRadius: 4,
-                    order: 2,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Trades',
-                    data: dayData.tradeCounts,
-                    type: 'line',
+        this.charts.pnlEvolution = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: evolutionData.labels,
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: evolutionData.values,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
                     pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#fff',
+                    pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     pointRadius: 4,
-                    pointHoverRadius: 6,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: false,
-                    order: 1,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index'
+                    pointHoverRadius: 6
+                }]
             },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        padding: 12,
-                        font: { size: 11 }
-                    }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
                 },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: '#3b82f6',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: (context) => {
-                            if (context.dataset.label === 'Commissions') {
-                                return `Commissions: ${this.formatCurrency(context.parsed.y)}`;
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (context) => {
+                                return `Portfolio: ${this.formatCurrency(context.parsed.y)}`;
                             }
-                            return `Trades: ${context.parsed.y}`;
                         }
                     }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#6b7280', font: { size: 10 } }
                 },
-                y: {
-                    position: 'left',
-                    beginAtZero: true,
-                    title: {
+                scales: {
+                    x: {
                         display: true,
-                        text: 'Commissions ($)',
-                        color: '#ef4444',
-                        font: { size: 11 }
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 11
+                            }
+                        }
                     },
-                    grid: { color: 'rgba(0, 0, 0, 0.06)' },
-                    ticks: {
-                        color: '#6b7280',
-                        callback: (value) => '$' + value
+                    y: {
+                        display: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 11
+                            },
+                            callback: (value) => {
+                                return this.formatCurrency(value);
+                            }
+                        }
                     }
                 },
-                y1: {
-                    position: 'right',
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Trades',
-                        color: '#3b82f6',
-                        font: { size: 11 }
-                    },
-                    grid: { drawOnChartArea: false },
-                    ticks: {
-                        color: '#6b7280',
-                        stepSize: 1
+                elements: {
+                    point: {
+                        hoverRadius: 8
                     }
                 }
             }
-        }
-    });
-}
+        });
 
-/**
- * Get commissions and trade counts grouped by day
- */
-getCommissionsByDayData(trades) {
-    if (!trades || trades.length === 0) {
-        return { labels: [], commissions: [], tradeCounts: [] };
+        this.setupChartControls();
     }
 
-    const dayMap = {};
-    trades.forEach(trade => {
-        const exitTime = trade.exitTime || trade.soldDate || trade.date;
-        if (!exitTime) return;
-        const d = new Date(exitTime);
-        if (isNaN(d.getTime())) return;
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (!dayMap[key]) dayMap[key] = { commission: 0, trades: 0 };
-        dayMap[key].commission += (trade.totalCommission || 0);
-        dayMap[key].trades += 1;
-    });
-
-    // Sort by date
-    const sortedKeys = Object.keys(dayMap).sort();
-
-    // Format labels as shorter dates (e.g. "Feb 11")
-    const labels = sortedKeys.map(key => {
-        const [y, m, d] = key.split('-');
-        const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-
-    return {
-        labels,
-        commissions: sortedKeys.map(k => parseFloat(dayMap[k].commission.toFixed(2))),
-        tradeCounts: sortedKeys.map(k => dayMap[k].trades)
-    };
-}
-
-/**
- * Update distribution chart
- */
-updateDistributionChart(summary) {
-    const ctx = document.getElementById('distributionChart');
-    if (!ctx) return;
-
-    if (this.charts.distribution) {
-        try {
-            this.charts.distribution.destroy();
-        } catch (error) {
-            console.warn('Warning destroying Distribution chart:', error);
+    /**
+     * Get PnL evolution data for chart
+     */
+    getPnLEvolutionData(trades) {
+        if (!trades || trades.length === 0) {
+            return { labels: ['Start'], values: [0] };
         }
-        this.charts.distribution = null;
+
+        const labels = ['Start'];
+        const values = [0];
+        let cumulativePnL = 0;
+
+        trades.forEach((trade, index) => {
+            cumulativePnL += trade.netProfit || 0;
+            labels.push(`Trade ${index + 1}`);
+            values.push(cumulativePnL);
+        });
+
+        return { labels, values };
     }
 
-    // Beautiful color palette for wins (emerald) and losses (rose)
-    const colors = {
-        wins: {
-            primary: '#10b981',
-            light: '#d1fae5',
-            hover: '#059669'
-        },
-        losses: {
-            primary: '#ef4444',
-            light: '#fee2e2',
-            hover: '#dc2626'
-        }
-    };
+    /**
+     * Setup chart period controls
+     */
+    setupChartControls() {
+        const chartButtons = document.querySelectorAll('.btn-chart');
+        chartButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active class from all buttons
+                chartButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                e.target.classList.add('active');
 
-    this.charts.distribution = new Chart(ctx.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Wins', 'Losses'],
-            datasets: [{
-                data: [summary.winCount, summary.lossCount],
-                backgroundColor: [colors.wins.primary, colors.losses.primary],
-                hoverBackgroundColor: [colors.wins.hover, colors.losses.hover],
-                borderWidth: 3,
-                borderColor: '#ffffff',
-                hoverBorderWidth: 4,
-                hoverBorderColor: '#ffffff',
-                // Add spacing between segments
-                spacing: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 1,
-            // Ensure proper sizing constraints
-            layout: {
-                padding: 10
+                // You can implement period filtering here
+                const period = e.target.dataset.period;
+                console.log(`Switching to ${period} view`);
+            });
+        });
+    }
+
+    /**
+     * Update Commissions by Day chart (bar = commission, line = trade count)
+     */
+    updateCommissionsByDayChart(trades) {
+        const ctx = document.getElementById('commissionsByDayChart');
+        if (!ctx) return;
+
+        if (this.charts.commissionsByDay) {
+            try {
+                this.charts.commissionsByDay.destroy();
+            } catch (error) {
+                console.warn('Warning destroying Commissions by Day chart:', error);
+            }
+            this.charts.commissionsByDay = null;
+        }
+
+        const dayData = this.getCommissionsByDayData(trades);
+
+        this.charts.commissionsByDay = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: dayData.labels,
+                datasets: [
+                    {
+                        label: 'Commissions',
+                        data: dayData.commissions,
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        hoverBackgroundColor: 'rgba(239, 68, 68, 0.9)',
+                        borderRadius: 4,
+                        order: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Trades',
+                        data: dayData.tradeCounts,
+                        type: 'line',
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        order: 1,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    align: 'center',
-                    labels: {
-                        padding: 15,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        font: {
-                            size: 12,
-                            weight: '500'
-                        },
-                        color: 'var(--text-primary)',
-                        generateLabels: (chart) => {
-                            const data = chart.data;
-                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            return data.labels.map((label, i) => {
-                                const value = data.datasets[0].data[i];
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return {
-                                    text: `${label}: ${value} (${percentage}%)`,
-                                    fillStyle: data.datasets[0].backgroundColor[i],
-                                    strokeStyle: data.datasets[0].backgroundColor[i],
-                                    pointStyle: 'circle',
-                                    hidden: false,
-                                    index: i
-                                };
-                            });
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 12,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (context) => {
+                                if (context.dataset.label === 'Commissions') {
+                                    return `Commissions: ${this.formatCurrency(context.parsed.y)}`;
+                                }
+                                return `Trades: ${context.parsed.y}`;
+                            }
                         }
                     }
                 },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#ffffff',
-                    bodyColor: '#ffffff',
-                    borderColor: '#3b82f6',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12,
-                    displayColors: true,
-                    callbacks: {
-                        title: (context) => {
-                            return context[0].label;
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#6b7280', font: { size: 10 } }
+                    },
+                    y: {
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Commissions ($)',
+                            color: '#ef4444',
+                            font: { size: 11 }
                         },
-                        label: (context) => {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const value = context.parsed;
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${value} trades (${percentage}%)`;
+                        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+                        ticks: {
+                            color: '#6b7280',
+                            callback: (value) => '$' + value
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Trades',
+                            color: '#3b82f6',
+                            font: { size: 11 }
+                        },
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            color: '#6b7280',
+                            stepSize: 1
                         }
                     }
                 }
-            },
-            // Add smooth animations
-            animation: {
-                animateRotate: true,
-                animateScale: true,
-                duration: 1000,
-                easing: 'easeOutQuart'
-            },
-            // Interaction settings
-            interaction: {
-                intersect: false
-            },
-            // Cutout for doughnut hole (makes it more modern)
-            cutout: '60%',
-            // Radius settings for better proportions
-            radius: '85%'
+            }
+        });
+    }
+
+    /**
+     * Get commissions and trade counts grouped by day
+     */
+    getCommissionsByDayData(trades) {
+        if (!trades || trades.length === 0) {
+            return { labels: [], commissions: [], tradeCounts: [] };
         }
-    });
-}
 
-// Performance chart data method removed — replaced by getCommissionsByDayData above
+        const dayMap = {};
+        trades.forEach(trade => {
+            const exitTime = trade.exitTime || trade.soldDate || trade.date;
+            if (!exitTime) return;
+            const d = new Date(exitTime);
+            if (isNaN(d.getTime())) return;
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (!dayMap[key]) dayMap[key] = { commission: 0, trades: 0 };
+            dayMap[key].commission += (trade.totalCommission || 0);
+            dayMap[key].trades += 1;
+        });
 
-/**
- * Update dashboard trades table with today's trades (or latest trading day)
- */
-updateDashboardTable(trades) {
-    const dashboardBody = document.getElementById('dashboardTradesBody');
-    const subtitleEl = document.getElementById('todayTradesSubtitle');
-    if (!dashboardBody) return;
+        // Sort by date
+        const sortedKeys = Object.keys(dayMap).sort();
 
-    dashboardBody.innerHTML = '';
+        // Format labels as shorter dates (e.g. "Feb 11")
+        const labels = sortedKeys.map(key => {
+            const [y, m, d] = key.split('-');
+            const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
 
-    if (!trades || trades.length === 0) {
-        dashboardBody.innerHTML = '<tr class="no-data"><td colspan="6">No trades available</td></tr>';
-        return;
+        return {
+            labels,
+            commissions: sortedKeys.map(k => parseFloat(dayMap[k].commission.toFixed(2))),
+            tradeCounts: sortedKeys.map(k => dayMap[k].trades)
+        };
     }
 
-    // Get today's date string (YYYY-MM-DD)
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    /**
+     * Update distribution chart
+     */
+    updateDistributionChart(summary) {
+        const ctx = document.getElementById('distributionChart');
+        if (!ctx) return;
 
-    // Filter trades for today
-    let todayTrades = trades.filter(trade => {
-        const exitTime = trade.exitTime || trade.soldDate || trade.date;
-        if (!exitTime) return false;
-        const d = new Date(exitTime);
-        if (isNaN(d.getTime())) return false;
-        const tradeDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        return tradeDate === todayStr;
-    });
-
-    let label = 'Today';
-
-    // If no trades today, show the most recent trading day
-    if (todayTrades.length === 0) {
-        // Find the latest trade date
-        const sortedByDate = [...trades]
-            .filter(t => t.exitTime || t.soldDate || t.date)
-            .sort((a, b) => {
-                const da = new Date(a.exitTime || a.soldDate || a.date);
-                const db = new Date(b.exitTime || b.soldDate || b.date);
-                return db - da;
-            });
-
-        if (sortedByDate.length > 0) {
-            const latestDate = new Date(sortedByDate[0].exitTime || sortedByDate[0].soldDate || sortedByDate[0].date);
-            const latestStr = `${latestDate.getFullYear()}-${String(latestDate.getMonth() + 1).padStart(2, '0')}-${String(latestDate.getDate()).padStart(2, '0')}`;
-
-            todayTrades = trades.filter(trade => {
-                const exitTime = trade.exitTime || trade.soldDate || trade.date;
-                if (!exitTime) return false;
-                const d = new Date(exitTime);
-                if (isNaN(d.getTime())) return false;
-                const tradeDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                return tradeDate === latestStr;
-            });
-
-            label = latestDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        }
-    }
-
-    // Update subtitle
-    if (subtitleEl) {
-        const totalPnl = todayTrades.reduce((s, t) => s + (t.netProfit ?? t.returnValue ?? 0), 0);
-        const pnlClass = totalPnl >= 0 ? 'positive' : 'negative';
-        subtitleEl.innerHTML = `${label} — <span class="${pnlClass}">${this.formatCurrency(totalPnl)}</span> · ${todayTrades.length} trades`;
-    }
-
-    // Sort by time (most recent first)
-    todayTrades.sort((a, b) => {
-        const da = new Date(a.exitTime || a.soldDate || a.date || 0);
-        const db = new Date(b.exitTime || b.soldDate || b.date || 0);
-        return db - da;
-    });
-
-    if (todayTrades.length === 0) {
-        dashboardBody.innerHTML = '<tr class="no-data"><td colspan="6">No trades today</td></tr>';
-        return;
-    }
-
-    todayTrades.forEach((trade, index) => {
-        try {
-            const row = document.createElement('tr');
-            row.onclick = () => {
-                const tradesSection = document.querySelector('.trades-section');
-                if (tradesSection) tradesSection.scrollIntoView({ behavior: 'smooth' });
-            };
-
-            const statusClass = (trade.status === 'WIN' || trade.isWin) ? 'win' : 'lose';
-            const returnClass = trade.netProfit >= 0 ? 'positive' : 'negative';
-            const entryPrice = trade.entry || trade.entryPrice || 0;
-            const exitPrice = trade.exit || trade.exitPrice || 0;
-
-            // Show time instead of full date since all are same day
-            let timeStr = '';
+        if (this.charts.distribution) {
             try {
-                const exitDate = new Date(trade.exitTime || trade.soldDate || trade.date);
-                if (!isNaN(exitDate.getTime())) {
-                    timeStr = exitDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                }
-            } catch (e) { /* ignore */ }
+                this.charts.distribution.destroy();
+            } catch (error) {
+                console.warn('Warning destroying Distribution chart:', error);
+            }
+            this.charts.distribution = null;
+        }
 
-            row.innerHTML = `
+        // Beautiful color palette for wins (emerald) and losses (rose)
+        const colors = {
+            wins: {
+                primary: '#10b981',
+                light: '#d1fae5',
+                hover: '#059669'
+            },
+            losses: {
+                primary: '#ef4444',
+                light: '#fee2e2',
+                hover: '#dc2626'
+            }
+        };
+
+        this.charts.distribution = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Wins', 'Losses'],
+                datasets: [{
+                    data: [summary.winCount, summary.lossCount],
+                    backgroundColor: [colors.wins.primary, colors.losses.primary],
+                    hoverBackgroundColor: [colors.wins.hover, colors.losses.hover],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#ffffff',
+                    // Add spacing between segments
+                    spacing: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 1,
+                // Ensure proper sizing constraints
+                layout: {
+                    padding: 10
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        align: 'center',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: {
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: 'var(--text-primary)',
+                            generateLabels: (chart) => {
+                                const data = chart.data;
+                                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return {
+                                        text: `${label}: ${value} (${percentage}%)`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        strokeStyle: data.datasets[0].backgroundColor[i],
+                                        pointStyle: 'circle',
+                                        hidden: false,
+                                        index: i
+                                    };
+                                });
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                            title: (context) => {
+                                return context[0].label;
+                            },
+                            label: (context) => {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = context.parsed;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${value} trades (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                // Add smooth animations
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
+                // Interaction settings
+                interaction: {
+                    intersect: false
+                },
+                // Cutout for doughnut hole (makes it more modern)
+                cutout: '60%',
+                // Radius settings for better proportions
+                radius: '85%'
+            }
+        });
+    }
+
+    // Performance chart data method removed — replaced by getCommissionsByDayData above
+
+    /**
+     * Update dashboard trades table with today's trades (or latest trading day)
+     */
+    updateDashboardTable(trades) {
+        const dashboardBody = document.getElementById('dashboardTradesBody');
+        const subtitleEl = document.getElementById('todayTradesSubtitle');
+        if (!dashboardBody) return;
+
+        dashboardBody.innerHTML = '';
+
+        if (!trades || trades.length === 0) {
+            dashboardBody.innerHTML = '<tr class="no-data"><td colspan="6">No trades available</td></tr>';
+            return;
+        }
+
+        // Get today's date string (YYYY-MM-DD)
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        // Filter trades for today
+        let todayTrades = trades.filter(trade => {
+            const exitTime = trade.exitTime || trade.soldDate || trade.date;
+            if (!exitTime) return false;
+            const d = new Date(exitTime);
+            if (isNaN(d.getTime())) return false;
+            const tradeDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return tradeDate === todayStr;
+        });
+
+        let label = 'Today';
+
+        // If no trades today, show the most recent trading day
+        if (todayTrades.length === 0) {
+            // Find the latest trade date
+            const sortedByDate = [...trades]
+                .filter(t => t.exitTime || t.soldDate || t.date)
+                .sort((a, b) => {
+                    const da = new Date(a.exitTime || a.soldDate || a.date);
+                    const db = new Date(b.exitTime || b.soldDate || b.date);
+                    return db - da;
+                });
+
+            if (sortedByDate.length > 0) {
+                const latestDate = new Date(sortedByDate[0].exitTime || sortedByDate[0].soldDate || sortedByDate[0].date);
+                const latestStr = `${latestDate.getFullYear()}-${String(latestDate.getMonth() + 1).padStart(2, '0')}-${String(latestDate.getDate()).padStart(2, '0')}`;
+
+                todayTrades = trades.filter(trade => {
+                    const exitTime = trade.exitTime || trade.soldDate || trade.date;
+                    if (!exitTime) return false;
+                    const d = new Date(exitTime);
+                    if (isNaN(d.getTime())) return false;
+                    const tradeDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    return tradeDate === latestStr;
+                });
+
+                label = latestDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            }
+        }
+
+        // Update subtitle
+        if (subtitleEl) {
+            const totalPnl = todayTrades.reduce((s, t) => s + (t.netProfit ?? t.returnValue ?? 0), 0);
+            const pnlClass = totalPnl >= 0 ? 'positive' : 'negative';
+            subtitleEl.innerHTML = `${label} — <span class="${pnlClass}">${this.formatCurrency(totalPnl)}</span> · ${todayTrades.length} trades`;
+        }
+
+        // Sort by time (most recent first)
+        todayTrades.sort((a, b) => {
+            const da = new Date(a.exitTime || a.soldDate || a.date || 0);
+            const db = new Date(b.exitTime || b.soldDate || b.date || 0);
+            return db - da;
+        });
+
+        if (todayTrades.length === 0) {
+            dashboardBody.innerHTML = '<tr class="no-data"><td colspan="6">No trades today</td></tr>';
+            return;
+        }
+
+        todayTrades.forEach((trade, index) => {
+            try {
+                const row = document.createElement('tr');
+                row.onclick = () => {
+                    const tradesSection = document.querySelector('.trades-section');
+                    if (tradesSection) tradesSection.scrollIntoView({ behavior: 'smooth' });
+                };
+
+                const statusClass = (trade.status === 'WIN' || trade.isWin) ? 'win' : 'lose';
+                const returnClass = trade.netProfit >= 0 ? 'positive' : 'negative';
+                const entryPrice = trade.entry || trade.entryPrice || 0;
+                const exitPrice = trade.exit || trade.exitPrice || 0;
+
+                // Show time instead of full date since all are same day
+                let timeStr = '';
+                try {
+                    const exitDate = new Date(trade.exitTime || trade.soldDate || trade.date);
+                    if (!isNaN(exitDate.getTime())) {
+                        timeStr = exitDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    }
+                } catch (e) { /* ignore */ }
+
+                row.innerHTML = `
                     <td>${timeStr}</td>
                     <td>${trade.contract || trade.symbol || '-'}</td>
                     <td><span class="side side-${(trade.side?.toLowerCase() || 'long')}">${trade.side || 'LONG'}</span></td>
@@ -1868,54 +1868,54 @@ updateDashboardTable(trades) {
                     <td><span class="status ${statusClass}">${trade.status || 'N/A'}</span></td>
                 `;
 
-            dashboardBody.appendChild(row);
-        } catch (rowError) {
-            console.error(`❌ Error creating dashboard row ${index + 1}:`, rowError);
-        }
-    });
-}
-
-/**
- * Test dashboard table population manually
- */
-testDashboardTable() {
-    console.log('🧪 Testing dashboard table...');
-
-    // Create test trade data
-    const testTrades = [{
-        date: '2026-02-11 17:00:00',
-        contract: 'CME_MINI:ES1!', // test data only
-        side: 'LONG',
-        entry: 6970.75,
-        exit: 6976.75,
-        netProfit: 300,
-        status: 'WIN'
-    }];
-
-    // Try to populate table
-    this.updateDashboardTable(testTrades);
-
-    return testTrades;
-}
-
-/**
- * Update trade history performance table
- */
-updateTradeHistoryPerformanceTable(trades) {
-    console.log('📊 updateTradeHistoryPerformanceTable called with trades:', trades);
-    const tableBody = document.getElementById('tradeHistoryPerformanceBody');
-
-    if (!tableBody) {
-        console.error('❌ tradeHistoryPerformanceBody element not found!');
-        return;
+                dashboardBody.appendChild(row);
+            } catch (rowError) {
+                console.error(`❌ Error creating dashboard row ${index + 1}:`, rowError);
+            }
+        });
     }
 
-    // Clear existing content
-    tableBody.innerHTML = '';
+    /**
+     * Test dashboard table population manually
+     */
+    testDashboardTable() {
+        console.log('🧪 Testing dashboard table...');
 
-    if (!trades || trades.length === 0) {
-        console.log('❌ No trades provided to trade history performance table');
-        tableBody.innerHTML = `
+        // Create test trade data
+        const testTrades = [{
+            date: '2026-02-11 17:00:00',
+            contract: 'CME_MINI:ES1!', // test data only
+            side: 'LONG',
+            entry: 6970.75,
+            exit: 6976.75,
+            netProfit: 300,
+            status: 'WIN'
+        }];
+
+        // Try to populate table
+        this.updateDashboardTable(testTrades);
+
+        return testTrades;
+    }
+
+    /**
+     * Update trade history performance table
+     */
+    updateTradeHistoryPerformanceTable(trades) {
+        console.log('📊 updateTradeHistoryPerformanceTable called with trades:', trades);
+        const tableBody = document.getElementById('tradeHistoryPerformanceBody');
+
+        if (!tableBody) {
+            console.error('❌ tradeHistoryPerformanceBody element not found!');
+            return;
+        }
+
+        // Clear existing content
+        tableBody.innerHTML = '';
+
+        if (!trades || trades.length === 0) {
+            console.log('❌ No trades provided to trade history performance table');
+            tableBody.innerHTML = `
                 <tr class="no-data">
                     <td colspan="11">
                         <div class="no-data-message">
@@ -1926,89 +1926,89 @@ updateTradeHistoryPerformanceTable(trades) {
                     </td>
                 </tr>
             `;
-        return;
+            return;
+        }
+
+        console.log('✅ About to populate trade history performance table with', trades.length, 'trades');
+
+        // Store trades for filtering/sorting
+        this.tradeHistoryTrades = trades;
+        this.filteredTradeHistoryTrades = [...trades];
+
+        // Initialize pagination
+        this.tradeHistoryCurrentPage = 1;
+        this.tradeHistoryRowsPerPage = 20;
+
+        // Setup event listeners for search and filter
+        this.setupTradeHistoryControls();
+
+        // Render the table
+        this.renderTradeHistoryTable();
     }
 
-    console.log('✅ About to populate trade history performance table with', trades.length, 'trades');
+    /**
+     * Setup trade history controls (search, filter, sort)
+     */
+    setupTradeHistoryControls() {
+        const searchInput = document.getElementById('tradeHistorySearch');
+        const statusFilter = document.getElementById('tradeHistoryStatusFilter');
+        const sortableHeaders = document.querySelectorAll('.trade-history-table th.sortable');
 
-    // Store trades for filtering/sorting
-    this.tradeHistoryTrades = trades;
-    this.filteredTradeHistoryTrades = [...trades];
+        // Search functionality
+        if (searchInput) {
+            searchInput.addEventListener('input', () => this.handleTradeHistorySearch());
+        }
 
-    // Initialize pagination
-    this.tradeHistoryCurrentPage = 1;
-    this.tradeHistoryRowsPerPage = 20;
+        // Filter functionality
+        if (statusFilter) {
+            statusFilter.addEventListener('change', () => this.handleTradeHistoryFilter());
+        }
 
-    // Setup event listeners for search and filter
-    this.setupTradeHistoryControls();
+        // Sort functionality
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', () => this.handleTradeHistorySort(header.dataset.sort));
+        });
 
-    // Render the table
-    this.renderTradeHistoryTable();
-}
+        // Export functionality
+        const exportBtn = document.getElementById('exportTradeHistoryBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportTradeHistory());
+        }
 
-/**
- * Setup trade history controls (search, filter, sort)
- */
-setupTradeHistoryControls() {
-    const searchInput = document.getElementById('tradeHistorySearch');
-    const statusFilter = document.getElementById('tradeHistoryStatusFilter');
-    const sortableHeaders = document.querySelectorAll('.trade-history-table th.sortable');
+        // Pagination controls
+        const prevBtn = document.getElementById('tradeHistoryPrevPage');
+        const nextBtn = document.getElementById('tradeHistoryNextPage');
 
-    // Search functionality
-    if (searchInput) {
-        searchInput.addEventListener('input', () => this.handleTradeHistorySearch());
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.changeTradeHistoryPage(-1));
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.changeTradeHistoryPage(1));
+        }
     }
 
-    // Filter functionality
-    if (statusFilter) {
-        statusFilter.addEventListener('change', () => this.handleTradeHistoryFilter());
-    }
+    /**
+     * Render trade history table with current filtered/sorted data
+     */
+    renderTradeHistoryTable() {
+        const tableBody = document.getElementById('tradeHistoryPerformanceBody');
+        if (!tableBody) return;
 
-    // Sort functionality
-    sortableHeaders.forEach(header => {
-        header.addEventListener('click', () => this.handleTradeHistorySort(header.dataset.sort));
-    });
+        // Apply filters and search
+        this.applyTradeHistoryFilters();
 
-    // Export functionality
-    const exportBtn = document.getElementById('exportTradeHistoryBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => this.exportTradeHistory());
-    }
+        // Calculate pagination
+        const totalTrades = this.filteredTradeHistoryTrades.length;
+        const totalPages = Math.ceil(totalTrades / this.tradeHistoryRowsPerPage);
+        const startIndex = (this.tradeHistoryCurrentPage - 1) * this.tradeHistoryRowsPerPage;
+        const endIndex = Math.min(startIndex + this.tradeHistoryRowsPerPage, totalTrades);
+        const pageTrades = this.filteredTradeHistoryTrades.slice(startIndex, endIndex);
 
-    // Pagination controls
-    const prevBtn = document.getElementById('tradeHistoryPrevPage');
-    const nextBtn = document.getElementById('tradeHistoryNextPage');
+        // Clear table
+        tableBody.innerHTML = '';
 
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => this.changeTradeHistoryPage(-1));
-    }
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => this.changeTradeHistoryPage(1));
-    }
-}
-
-/**
- * Render trade history table with current filtered/sorted data
- */
-renderTradeHistoryTable() {
-    const tableBody = document.getElementById('tradeHistoryPerformanceBody');
-    if (!tableBody) return;
-
-    // Apply filters and search
-    this.applyTradeHistoryFilters();
-
-    // Calculate pagination
-    const totalTrades = this.filteredTradeHistoryTrades.length;
-    const totalPages = Math.ceil(totalTrades / this.tradeHistoryRowsPerPage);
-    const startIndex = (this.tradeHistoryCurrentPage - 1) * this.tradeHistoryRowsPerPage;
-    const endIndex = Math.min(startIndex + this.tradeHistoryRowsPerPage, totalTrades);
-    const pageTrades = this.filteredTradeHistoryTrades.slice(startIndex, endIndex);
-
-    // Clear table
-    tableBody.innerHTML = '';
-
-    if (pageTrades.length === 0) {
-        tableBody.innerHTML = `
+        if (pageTrades.length === 0) {
+            tableBody.innerHTML = `
                 <tr class="no-data">
                     <td colspan="11">
                         <div class="no-data-message">
@@ -2019,23 +2019,23 @@ renderTradeHistoryTable() {
                     </td>
                 </tr>
             `;
-        return;
-    }
+            return;
+        }
 
-    // Create table rows
-    pageTrades.forEach((trade, index) => {
-        try {
-            const row = document.createElement('tr');
+        // Create table rows
+        pageTrades.forEach((trade, index) => {
+            try {
+                const row = document.createElement('tr');
 
-            // Calculate duration
-            const duration = this.calculateTradeDuration(trade);
+                // Calculate duration
+                const duration = this.calculateTradeDuration(trade);
 
-            // Format data
-            const statusClass = (trade.status === 'WIN' || trade.isWin) ? 'win' : 'lose';
-            const returnClass = trade.netProfit >= 0 ? 'positive' : 'negative';
-            const sideClass = trade.side?.toLowerCase() || 'long';
+                // Format data
+                const statusClass = (trade.status === 'WIN' || trade.isWin) ? 'win' : 'lose';
+                const returnClass = trade.netProfit >= 0 ? 'positive' : 'negative';
+                const sideClass = trade.side?.toLowerCase() || 'long';
 
-            row.innerHTML = `
+                row.innerHTML = `
                     <td>${this.formatDate(trade.date || trade.exitTime)}</td>
                     <td>${trade.contract || trade.symbol || '-'}</td>
                     <td><span class="side side-${sideClass}">${trade.side || 'LONG'}</span></td>
@@ -2047,425 +2047,425 @@ renderTradeHistoryTable() {
                     <td class="duration">${duration}</td>
                 `;
 
-            tableBody.appendChild(row);
+                tableBody.appendChild(row);
 
-        } catch (rowError) {
-            console.error(`❌ Error creating trade history row ${index + 1}:`, rowError);
-            console.error('Trade data:', trade);
-        }
-    });
+            } catch (rowError) {
+                console.error(`❌ Error creating trade history row ${index + 1}:`, rowError);
+                console.error('Trade data:', trade);
+            }
+        });
 
-    // Update pagination info
-    this.updateTradeHistoryPagination(startIndex + 1, endIndex, totalTrades, totalPages);
-}
+        // Update pagination info
+        this.updateTradeHistoryPagination(startIndex + 1, endIndex, totalTrades, totalPages);
+    }
 
-/**
- * Calculate trade duration
- */
-calculateTradeDuration(trade) {
-    try {
-        const entryTime = new Date(trade.boughtDate || trade.entryTime || trade.date);
-        const exitTime = new Date(trade.soldDate || trade.exitTime || trade.date);
+    /**
+     * Calculate trade duration
+     */
+    calculateTradeDuration(trade) {
+        try {
+            const entryTime = new Date(trade.boughtDate || trade.entryTime || trade.date);
+            const exitTime = new Date(trade.soldDate || trade.exitTime || trade.date);
 
-        if (isNaN(entryTime.getTime()) || isNaN(exitTime.getTime())) {
+            if (isNaN(entryTime.getTime()) || isNaN(exitTime.getTime())) {
+                return '—';
+            }
+
+            const durationMs = exitTime.getTime() - entryTime.getTime();
+            const hours = Math.floor(durationMs / (1000 * 60 * 60));
+            const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (hours < 24) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                const days = Math.floor(hours / 24);
+                const remainingHours = hours % 24;
+                return `${days}d ${remainingHours}h`;
+            }
+        } catch (error) {
             return '—';
         }
-
-        const durationMs = exitTime.getTime() - entryTime.getTime();
-        const hours = Math.floor(durationMs / (1000 * 60 * 60));
-        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (hours < 24) {
-            return `${hours}h ${minutes}m`;
-        } else {
-            const days = Math.floor(hours / 24);
-            const remainingHours = hours % 24;
-            return `${days}d ${remainingHours}h`;
-        }
-    } catch (error) {
-        return '—';
-    }
-}
-
-/**
- * Apply filters and search to trade history
- */
-applyTradeHistoryFilters() {
-    let filtered = [...this.tradeHistoryTrades];
-
-    // Apply search
-    const searchTerm = document.getElementById('tradeHistorySearch')?.value.toLowerCase() || '';
-    if (searchTerm) {
-        filtered = filtered.filter(trade =>
-            (trade.contract || trade.symbol || '').toLowerCase().includes(searchTerm) ||
-            (trade.side || '').toLowerCase().includes(searchTerm) ||
-            (trade.status || '').toLowerCase().includes(searchTerm) ||
-            (trade.date || '').toLowerCase().includes(searchTerm)
-        );
     }
 
-    // Apply status filter
-    const statusFilter = document.getElementById('tradeHistoryStatusFilter')?.value || 'all';
-    if (statusFilter !== 'all') {
-        filtered = filtered.filter(trade => trade.status === statusFilter);
-    }
+    /**
+     * Apply filters and search to trade history
+     */
+    applyTradeHistoryFilters() {
+        let filtered = [...this.tradeHistoryTrades];
 
-    this.filteredTradeHistoryTrades = filtered;
-}
-
-/**
- * Handle trade history search
- */
-handleTradeHistorySearch() {
-    this.tradeHistoryCurrentPage = 1; // Reset to first page
-    this.renderTradeHistoryTable();
-}
-
-/**
- * Handle trade history filter
- */
-handleTradeHistoryFilter() {
-    this.tradeHistoryCurrentPage = 1; // Reset to first page
-    this.renderTradeHistoryTable();
-}
-
-/**
- * Handle trade history sort
- */
-handleTradeHistorySort(sortField) {
-    // Toggle sort direction
-    if (this.tradeHistorySortField === sortField) {
-        this.tradeHistorySortDirection = this.tradeHistorySortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        this.tradeHistorySortField = sortField;
-        this.tradeHistorySortDirection = 'desc'; // Default to descending for most fields
-    }
-
-    // Update header indicators
-    document.querySelectorAll('.trade-history-table th.sortable').forEach(th => {
-        th.classList.remove('sorted', 'asc', 'desc');
-    });
-
-    const sortedHeader = document.querySelector(`.trade-history-table th[data-sort="${sortField}"]`);
-    if (sortedHeader) {
-        sortedHeader.classList.add('sorted', this.tradeHistorySortDirection);
-    }
-
-    // Sort the filtered trades
-    this.filteredTradeHistoryTrades.sort((a, b) => {
-        let aValue = this.getTradeValue(a, sortField);
-        let bValue = this.getTradeValue(b, sortField);
-
-        if (typeof aValue === 'string') {
-            aValue = aValue.toLowerCase();
-            bValue = bValue.toLowerCase();
+        // Apply search
+        const searchTerm = document.getElementById('tradeHistorySearch')?.value.toLowerCase() || '';
+        if (searchTerm) {
+            filtered = filtered.filter(trade =>
+                (trade.contract || trade.symbol || '').toLowerCase().includes(searchTerm) ||
+                (trade.side || '').toLowerCase().includes(searchTerm) ||
+                (trade.status || '').toLowerCase().includes(searchTerm) ||
+                (trade.date || '').toLowerCase().includes(searchTerm)
+            );
         }
 
-        if (aValue < bValue) return this.tradeHistorySortDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return this.tradeHistorySortDirection === 'asc' ? 1 : -1;
-        return 0;
-    });
+        // Apply status filter
+        const statusFilter = document.getElementById('tradeHistoryStatusFilter')?.value || 'all';
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(trade => trade.status === statusFilter);
+        }
 
-    this.renderTradeHistoryTable();
-}
-
-/**
- * Get trade value for sorting
- */
-getTradeValue(trade, field) {
-    switch (field) {
-        case 'date': return new Date(trade.date || trade.exitTime);
-        case 'symbol': return trade.contract || trade.symbol || '';
-        case 'side': return trade.side || '';
-        case 'entry': return parseFloat(trade.entry || trade.entryPrice || 0);
-        case 'exit': return parseFloat(trade.exit || trade.exitPrice || 0);
-        case 'quantity': return parseFloat(trade.quantity || 1);
-        case 'return': return parseFloat(trade.netProfit || 0);
-        case 'status': return trade.status || '';
-        default: return '';
+        this.filteredTradeHistoryTrades = filtered;
     }
-}
 
-/**
- * Change trade history page
- */
-changeTradeHistoryPage(direction) {
-    const totalPages = Math.ceil(this.filteredTradeHistoryTrades.length / this.tradeHistoryRowsPerPage);
-    const newPage = this.tradeHistoryCurrentPage + direction;
-
-    if (newPage >= 1 && newPage <= totalPages) {
-        this.tradeHistoryCurrentPage = newPage;
+    /**
+     * Handle trade history search
+     */
+    handleTradeHistorySearch() {
+        this.tradeHistoryCurrentPage = 1; // Reset to first page
         this.renderTradeHistoryTable();
     }
-}
 
-/**
- * Update trade history pagination display
- */
-updateTradeHistoryPagination(start, end, total, totalPages) {
-    const startSpan = document.getElementById('tradeHistoryStart');
-    const endSpan = document.getElementById('tradeHistoryEnd');
-    const totalSpan = document.getElementById('tradeHistoryTotal');
-    const prevBtn = document.getElementById('tradeHistoryPrevPage');
-    const nextBtn = document.getElementById('tradeHistoryNextPage');
-
-    if (startSpan) startSpan.textContent = start;
-    if (endSpan) endSpan.textContent = end;
-    if (totalSpan) totalSpan.textContent = total;
-
-    if (prevBtn) {
-        prevBtn.disabled = this.tradeHistoryCurrentPage <= 1;
-    }
-    if (nextBtn) {
-        nextBtn.disabled = this.tradeHistoryCurrentPage >= totalPages;
-    }
-}
-
-/**
- * Export trade history
- */
-exportTradeHistory() {
-    if (!this.filteredTradeHistoryTrades || this.filteredTradeHistoryTrades.length === 0) {
-        this.showToast('No trade history data to export', 'warning');
-        return;
+    /**
+     * Handle trade history filter
+     */
+    handleTradeHistoryFilter() {
+        this.tradeHistoryCurrentPage = 1; // Reset to first page
+        this.renderTradeHistoryTable();
     }
 
-    // Create CSV content
-    const headers = ['Date', 'Symbol', 'Side', 'Entry', 'Exit', 'Quantity', 'Return', 'Status', 'Duration'];
-    const csvContent = [
-        headers.join(','),
-        ...this.filteredTradeHistoryTrades.map(trade => [
-            trade.date || trade.exitTime || '',
-            trade.contract || trade.symbol || '',
-            trade.side || '',
-            trade.entry || trade.entryPrice || 0,
-            trade.exit || trade.exitPrice || 0,
-            trade.quantity || 1,
-            trade.netProfit || 0,
-            trade.status || '',
-            this.calculateTradeDuration(trade)
-        ].join(','))
-    ].join('\n');
+    /**
+     * Handle trade history sort
+     */
+    handleTradeHistorySort(sortField) {
+        // Toggle sort direction
+        if (this.tradeHistorySortField === sortField) {
+            this.tradeHistorySortDirection = this.tradeHistorySortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.tradeHistorySortField = sortField;
+            this.tradeHistorySortDirection = 'desc'; // Default to descending for most fields
+        }
 
-    // Download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `trade-history-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+        // Update header indicators
+        document.querySelectorAll('.trade-history-table th.sortable').forEach(th => {
+            th.classList.remove('sorted', 'asc', 'desc');
+        });
 
-    this.showToast('Trade history exported successfully', 'success');
-}
+        const sortedHeader = document.querySelector(`.trade-history-table th[data-sort="${sortField}"]`);
+        if (sortedHeader) {
+            sortedHeader.classList.add('sorted', this.tradeHistorySortDirection);
+        }
 
-/**
- * Update trades table
- */
-updateTradesTable() {
-    try {
-        if (!this.tradesTableBody || !this.currentTrades || this.currentTrades.length === 0) {
-            console.log('📋 Trade History: No trades to display');
+        // Sort the filtered trades
+        this.filteredTradeHistoryTrades.sort((a, b) => {
+            let aValue = this.getTradeValue(a, sortField);
+            let bValue = this.getTradeValue(b, sortField);
+
+            if (typeof aValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (aValue < bValue) return this.tradeHistorySortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return this.tradeHistorySortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        this.renderTradeHistoryTable();
+    }
+
+    /**
+     * Get trade value for sorting
+     */
+    getTradeValue(trade, field) {
+        switch (field) {
+            case 'date': return new Date(trade.date || trade.exitTime);
+            case 'symbol': return trade.contract || trade.symbol || '';
+            case 'side': return trade.side || '';
+            case 'entry': return parseFloat(trade.entry || trade.entryPrice || 0);
+            case 'exit': return parseFloat(trade.exit || trade.exitPrice || 0);
+            case 'quantity': return parseFloat(trade.quantity || 1);
+            case 'return': return parseFloat(trade.netProfit || 0);
+            case 'status': return trade.status || '';
+            default: return '';
+        }
+    }
+
+    /**
+     * Change trade history page
+     */
+    changeTradeHistoryPage(direction) {
+        const totalPages = Math.ceil(this.filteredTradeHistoryTrades.length / this.tradeHistoryRowsPerPage);
+        const newPage = this.tradeHistoryCurrentPage + direction;
+
+        if (newPage >= 1 && newPage <= totalPages) {
+            this.tradeHistoryCurrentPage = newPage;
+            this.renderTradeHistoryTable();
+        }
+    }
+
+    /**
+     * Update trade history pagination display
+     */
+    updateTradeHistoryPagination(start, end, total, totalPages) {
+        const startSpan = document.getElementById('tradeHistoryStart');
+        const endSpan = document.getElementById('tradeHistoryEnd');
+        const totalSpan = document.getElementById('tradeHistoryTotal');
+        const prevBtn = document.getElementById('tradeHistoryPrevPage');
+        const nextBtn = document.getElementById('tradeHistoryNextPage');
+
+        if (startSpan) startSpan.textContent = start;
+        if (endSpan) endSpan.textContent = end;
+        if (totalSpan) totalSpan.textContent = total;
+
+        if (prevBtn) {
+            prevBtn.disabled = this.tradeHistoryCurrentPage <= 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = this.tradeHistoryCurrentPage >= totalPages;
+        }
+    }
+
+    /**
+     * Export trade history
+     */
+    exportTradeHistory() {
+        if (!this.filteredTradeHistoryTrades || this.filteredTradeHistoryTrades.length === 0) {
+            this.showToast('No trade history data to export', 'warning');
             return;
         }
 
-        console.log('📋 updateTradesTable called with', this.currentTrades.length, 'trades');
+        // Create CSV content
+        const headers = ['Date', 'Symbol', 'Side', 'Entry', 'Exit', 'Quantity', 'Return', 'Status', 'Duration'];
+        const csvContent = [
+            headers.join(','),
+            ...this.filteredTradeHistoryTrades.map(trade => [
+                trade.date || trade.exitTime || '',
+                trade.contract || trade.symbol || '',
+                trade.side || '',
+                trade.entry || trade.entryPrice || 0,
+                trade.exit || trade.exitPrice || 0,
+                trade.quantity || 1,
+                trade.netProfit || 0,
+                trade.status || '',
+                this.calculateTradeDuration(trade)
+            ].join(','))
+        ].join('\n');
 
-        // Apply filters and search
-        this.applyFiltersAndSearch();
+        // Download file
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trade-history-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
 
-        // Sort data
-        this.sortTrades();
-
-        // Update pagination
-        this.updatePagination();
-
-        // Render table rows
-        this.renderTableRows();
-    } catch (error) {
-        console.error('❌ Error updating trades table:', error);
+        this.showToast('Trade history exported successfully', 'success');
     }
-}
 
-/**
- * Apply search and filters
- */
-applyFiltersAndSearch() {
-    let filtered = [...this.currentTrades];
+    /**
+     * Update trades table
+     */
+    updateTradesTable() {
+        try {
+            if (!this.tradesTableBody || !this.currentTrades || this.currentTrades.length === 0) {
+                console.log('📋 Trade History: No trades to display');
+                return;
+            }
 
-    // Apply search
-    const searchTerm = this.tradeSearch?.value?.toLowerCase().trim() || '';
-    if (searchTerm) {
-        filtered = filtered.filter(trade => {
-            const contract = (trade.contract || trade.symbol || '').toLowerCase();
-            const status = (trade.status || '').toLowerCase();
-            const entry = (trade.entry ?? trade.entryPrice ?? '').toString();
-            const exit = (trade.exit ?? trade.exitPrice ?? '').toString();
-            return contract.includes(searchTerm) ||
-                status.includes(searchTerm) ||
-                entry.includes(searchTerm) ||
-                exit.includes(searchTerm);
+            console.log('📋 updateTradesTable called with', this.currentTrades.length, 'trades');
+
+            // Apply filters and search
+            this.applyFiltersAndSearch();
+
+            // Sort data
+            this.sortTrades();
+
+            // Update pagination
+            this.updatePagination();
+
+            // Render table rows
+            this.renderTableRows();
+        } catch (error) {
+            console.error('❌ Error updating trades table:', error);
+        }
+    }
+
+    /**
+     * Apply search and filters
+     */
+    applyFiltersAndSearch() {
+        let filtered = [...this.currentTrades];
+
+        // Apply search
+        const searchTerm = this.tradeSearch?.value?.toLowerCase().trim() || '';
+        if (searchTerm) {
+            filtered = filtered.filter(trade => {
+                const contract = (trade.contract || trade.symbol || '').toLowerCase();
+                const status = (trade.status || '').toLowerCase();
+                const entry = (trade.entry ?? trade.entryPrice ?? '').toString();
+                const exit = (trade.exit ?? trade.exitPrice ?? '').toString();
+                return contract.includes(searchTerm) ||
+                    status.includes(searchTerm) ||
+                    entry.includes(searchTerm) ||
+                    exit.includes(searchTerm);
+            });
+        }
+
+        // Apply status filter
+        const statusFilter = this.statusFilter?.value || '';
+        if (statusFilter) {
+            filtered = filtered.filter(trade => trade.status === statusFilter);
+        }
+
+        this.filteredTrades = filtered;
+        this.currentPage = 1; // Reset to first page
+    }
+
+    /**
+     * Sort trades
+     */
+    sortTrades() {
+        const { column, direction } = this.currentSort;
+
+        this.filteredTrades.sort((a, b) => {
+            let aVal = a[column];
+            let bVal = b[column];
+
+            // Handle different data types
+            if (column === 'date') {
+                aVal = new Date(a.entryTime);
+                bVal = new Date(b.entryTime);
+            } else if (typeof aVal === 'string') {
+                aVal = aVal.toLowerCase();
+                bVal = bVal.toLowerCase();
+            }
+
+            let comparison = 0;
+            if (aVal < bVal) comparison = -1;
+            else if (aVal > bVal) comparison = 1;
+
+            return direction === 'desc' ? -comparison : comparison;
         });
     }
 
-    // Apply status filter
-    const statusFilter = this.statusFilter?.value || '';
-    if (statusFilter) {
-        filtered = filtered.filter(trade => trade.status === statusFilter);
-    }
+    /**
+     * Handle table sort
+     */
+    handleTableSort(e) {
+        const th = e.target.closest('th[data-sort]');
+        if (!th) return;
 
-    this.filteredTrades = filtered;
-    this.currentPage = 1; // Reset to first page
-}
+        const column = th.dataset.sort;
 
-/**
- * Sort trades
- */
-sortTrades() {
-    const { column, direction } = this.currentSort;
-
-    this.filteredTrades.sort((a, b) => {
-        let aVal = a[column];
-        let bVal = b[column];
-
-        // Handle different data types
-        if (column === 'date') {
-            aVal = new Date(a.entryTime);
-            bVal = new Date(b.entryTime);
-        } else if (typeof aVal === 'string') {
-            aVal = aVal.toLowerCase();
-            bVal = bVal.toLowerCase();
+        // Toggle sort direction
+        if (this.currentSort.column === column) {
+            this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.currentSort.column = column;
+            this.currentSort.direction = 'desc';
         }
 
-        let comparison = 0;
-        if (aVal < bVal) comparison = -1;
-        else if (aVal > bVal) comparison = 1;
+        // Update table header appearance
+        this.updateSortHeaders(column, this.currentSort.direction);
 
-        return direction === 'desc' ? -comparison : comparison;
-    });
-}
-
-/**
- * Handle table sort
- */
-handleTableSort(e) {
-    const th = e.target.closest('th[data-sort]');
-    if (!th) return;
-
-    const column = th.dataset.sort;
-
-    // Toggle sort direction
-    if (this.currentSort.column === column) {
-        this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-        this.currentSort.column = column;
-        this.currentSort.direction = 'desc';
+        // Re-render table
+        this.updateTradesTable();
     }
 
-    // Update table header appearance
-    this.updateSortHeaders(column, this.currentSort.direction);
+    /**
+     * Update sort headers
+     */
+    updateSortHeaders(activeColumn, direction) {
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.classList.remove('sorted');
+            const icon = th.querySelector('i');
+            icon.className = 'fas fa-sort';
+        });
 
-    // Re-render table
-    this.updateTradesTable();
-}
-
-/**
- * Update sort headers
- */
-updateSortHeaders(activeColumn, direction) {
-    document.querySelectorAll('th[data-sort]').forEach(th => {
-        th.classList.remove('sorted');
-        const icon = th.querySelector('i');
-        icon.className = 'fas fa-sort';
-    });
-
-    const activeHeader = document.querySelector(`th[data-sort="${activeColumn}"]`);
-    activeHeader.classList.add('sorted');
-    const activeIcon = activeHeader.querySelector('i');
-    activeIcon.className = direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
-}
-
-/**
- * Update pagination
- */
-updatePagination() {
-    const totalTrades = this.filteredTrades.length;
-    const totalPages = Math.ceil(totalTrades / this.tradesPerPage);
-
-    // Update pagination info
-    const start = (this.currentPage - 1) * this.tradesPerPage + 1;
-    const end = Math.min(this.currentPage * this.tradesPerPage, totalTrades);
-
-    this.paginationStart.textContent = totalTrades > 0 ? start : 0;
-    this.paginationEnd.textContent = end;
-    this.paginationTotal.textContent = totalTrades;
-
-    // Update pagination controls
-    this.prevPage.disabled = this.currentPage <= 1;
-    this.nextPage.disabled = this.currentPage >= totalPages;
-
-    // Update page numbers
-    this.renderPageNumbers(totalPages);
-}
-
-/**
- * Render page numbers
- */
-renderPageNumbers(totalPages) {
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    if (endPage - startPage + 1 < maxVisiblePages) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        const activeHeader = document.querySelector(`th[data-sort="${activeColumn}"]`);
+        activeHeader.classList.add('sorted');
+        const activeIcon = activeHeader.querySelector('i');
+        activeIcon.className = direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
     }
 
-    let html = '';
+    /**
+     * Update pagination
+     */
+    updatePagination() {
+        const totalTrades = this.filteredTrades.length;
+        const totalPages = Math.ceil(totalTrades / this.tradesPerPage);
 
-    for (let i = startPage; i <= endPage; i++) {
-        html += `
+        // Update pagination info
+        const start = (this.currentPage - 1) * this.tradesPerPage + 1;
+        const end = Math.min(this.currentPage * this.tradesPerPage, totalTrades);
+
+        this.paginationStart.textContent = totalTrades > 0 ? start : 0;
+        this.paginationEnd.textContent = end;
+        this.paginationTotal.textContent = totalTrades;
+
+        // Update pagination controls
+        this.prevPage.disabled = this.currentPage <= 1;
+        this.nextPage.disabled = this.currentPage >= totalPages;
+
+        // Update page numbers
+        this.renderPageNumbers(totalPages);
+    }
+
+    /**
+     * Render page numbers
+     */
+    renderPageNumbers(totalPages) {
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        let html = '';
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `
                 <button class="page-number ${i === this.currentPage ? 'active' : ''}" 
                         data-page="${i}">${i}</button>
             `;
-    }
+        }
 
-    this.pageNumbers.innerHTML = html;
+        this.pageNumbers.innerHTML = html;
 
-    // Add click events to page numbers
-    this.pageNumbers.querySelectorAll('.page-number').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            this.changePage(parseInt(e.target.dataset.page));
+        // Add click events to page numbers
+        this.pageNumbers.querySelectorAll('.page-number').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.changePage(parseInt(e.target.dataset.page));
+            });
         });
-    });
-}
-
-/**
- * Change page
- */
-changePage(page) {
-    const totalPages = Math.ceil(this.filteredTrades.length / this.tradesPerPage);
-
-    if (page >= 1 && page <= totalPages) {
-        this.currentPage = page;
-        this.updatePagination();
-        this.renderTableRows();
     }
-}
 
-/**
- * Render table rows
- */
-renderTableRows() {
-    if (!this.tradesTableBody) return;
+    /**
+     * Change page
+     */
+    changePage(page) {
+        const totalPages = Math.ceil(this.filteredTrades.length / this.tradesPerPage);
 
-    const start = (this.currentPage - 1) * this.tradesPerPage;
-    const end = start + this.tradesPerPage;
-    const pageTrades = this.filteredTrades.slice(start, end);
+        if (page >= 1 && page <= totalPages) {
+            this.currentPage = page;
+            this.updatePagination();
+            this.renderTableRows();
+        }
+    }
 
-    if (pageTrades.length === 0) {
-        this.tradesTableBody.innerHTML = `
+    /**
+     * Render table rows
+     */
+    renderTableRows() {
+        if (!this.tradesTableBody) return;
+
+        const start = (this.currentPage - 1) * this.tradesPerPage;
+        const end = start + this.tradesPerPage;
+        const pageTrades = this.filteredTrades.slice(start, end);
+
+        if (pageTrades.length === 0) {
+            this.tradesTableBody.innerHTML = `
                 <tr class="no-data-row">
                     <td colspan="11">
                         <div class="no-data-message">
@@ -2476,60 +2476,60 @@ renderTableRows() {
                     </td>
                 </tr>
             `;
-        return;
-    }
-
-    const html = pageTrades.map(trade => {
-        try {
-            return this.createTradeRow(trade);
-        } catch (err) {
-            console.error('❌ Error creating trade row:', err, trade);
-            return '';
+            return;
         }
-    }).join('');
 
-    this.tradesTableBody.innerHTML = html;
+        const html = pageTrades.map(trade => {
+            try {
+                return this.createTradeRow(trade);
+            } catch (err) {
+                console.error('❌ Error creating trade row:', err, trade);
+                return '';
+            }
+        }).join('');
 
-    // Add click events to rows
-    this.tradesTableBody.querySelectorAll('tr.trade-row').forEach(row => {
-        row.addEventListener('click', () => {
-            const tradeId = row.dataset.tradeId;
-            const trade = this.currentTrades.find(t => t.id === tradeId);
-            if (trade) this.showTradeModal(trade);
+        this.tradesTableBody.innerHTML = html;
+
+        // Add click events to rows
+        this.tradesTableBody.querySelectorAll('tr.trade-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const tradeId = row.dataset.tradeId;
+                const trade = this.currentTrades.find(t => t.id === tradeId);
+                if (trade) this.showTradeModal(trade);
+            });
         });
-    });
-}
-
-/**
- * Create table row HTML
- */
-createTradeRow(trade) {
-    const pnl = trade.netProfit ?? trade.returnValue ?? trade.return ?? 0;
-    const profitClass = pnl >= 0 ? 'profit-positive' : 'profit-negative';
-    const status = trade.status || (pnl >= 0 ? 'WIN' : 'LOSE');
-    const statusClass = status.toLowerCase();
-    const side = trade.side || 'LONG';
-    const qty = trade.quantity ?? trade.qty ?? 1;
-    const entryPrice = trade.entry ?? trade.entryPrice ?? 0;
-    const exitPrice = trade.exit ?? trade.exitPrice ?? 0;
-    const dateValue = trade.entryTime || trade.date || trade.boughtDate;
-    const dateStr = dateValue ? this.formatDate(new Date(dateValue)) : '-';
-    const duration = trade.duration || '-';
-
-    // Try to get margin from trade.margin or from the embedded order objects
-    let margin = trade.margin || 0;
-    if (!margin && trade.entryOrder && trade.entryOrder.margin) {
-        const m = String(trade.entryOrder.margin).replace(/[^0-9.]/g, '');
-        margin = parseFloat(m) || 0;
-    }
-    if (!margin && trade.exitOrder && trade.exitOrder.margin) {
-        const m = String(trade.exitOrder.margin).replace(/[^0-9.]/g, '');
-        margin = parseFloat(m) || 0;
     }
 
-    const symbol = trade.contract || trade.symbol || '-';
+    /**
+     * Create table row HTML
+     */
+    createTradeRow(trade) {
+        const pnl = trade.netProfit ?? trade.returnValue ?? trade.return ?? 0;
+        const profitClass = pnl >= 0 ? 'profit-positive' : 'profit-negative';
+        const status = trade.status || (pnl >= 0 ? 'WIN' : 'LOSE');
+        const statusClass = status.toLowerCase();
+        const side = trade.side || 'LONG';
+        const qty = trade.quantity ?? trade.qty ?? 1;
+        const entryPrice = trade.entry ?? trade.entryPrice ?? 0;
+        const exitPrice = trade.exit ?? trade.exitPrice ?? 0;
+        const dateValue = trade.entryTime || trade.date || trade.boughtDate;
+        const dateStr = dateValue ? this.formatDate(new Date(dateValue)) : '-';
+        const duration = trade.duration || '-';
 
-    return `
+        // Try to get margin from trade.margin or from the embedded order objects
+        let margin = trade.margin || 0;
+        if (!margin && trade.entryOrder && trade.entryOrder.margin) {
+            const m = String(trade.entryOrder.margin).replace(/[^0-9.]/g, '');
+            margin = parseFloat(m) || 0;
+        }
+        if (!margin && trade.exitOrder && trade.exitOrder.margin) {
+            const m = String(trade.exitOrder.margin).replace(/[^0-9.]/g, '');
+            margin = parseFloat(m) || 0;
+        }
+
+        const symbol = trade.contract || trade.symbol || '-';
+
+        return `
             <tr data-trade-id="${trade.id || ''}" class="trade-row">
                 <td>${dateStr}</td>
                 <td>${symbol}</td>
@@ -2544,45 +2544,45 @@ createTradeRow(trade) {
                 <td>${duration}</td>
             </tr>
         `;
-}
+    }
 
-/**
- * Handle search input
- */
-handleSearch() {
-    this.updateTradesTable();
-}
+    /**
+     * Handle search input
+     */
+    handleSearch() {
+        this.updateTradesTable();
+    }
 
-/**
- * Handle filter change
- */
-handleFilter() {
-    this.updateTradesTable();
-}
+    /**
+     * Handle filter change
+     */
+    handleFilter() {
+        this.updateTradesTable();
+    }
 
-/**
- * Show trade modal
- */
-showTradeModal(trade) {
-    const html = this.createTradeModalContent(trade);
-    this.modalBody.innerHTML = html;
-    this.tradeModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
+    /**
+     * Show trade modal
+     */
+    showTradeModal(trade) {
+        const html = this.createTradeModalContent(trade);
+        this.modalBody.innerHTML = html;
+        this.tradeModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
 
-/**
- * Close trade modal
- */
-closeTradeModal() {
-    this.tradeModal.classList.remove('active');
-    document.body.style.overflow = '';
-}
+    /**
+     * Close trade modal
+     */
+    closeTradeModal() {
+        this.tradeModal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 
-/**
- * Create trade modal content
- */
-createTradeModalContent(trade) {
-    return `
+    /**
+     * Create trade modal content
+     */
+    createTradeModalContent(trade) {
+        return `
             <div class="trade-details">
                 <div class="detail-section">
                     <h4>Trade Summary</h4>
@@ -2658,296 +2658,297 @@ createTradeModalContent(trade) {
                 </div>
             </div>
         `;
-}
-
-/**
- * Export trades to CSV
- */
-exportTrades() {
-    if (this.currentTrades.length === 0) {
-        this.showToast('No trades to export', 'warning');
-        return;
     }
 
-    try {
-        const calculator = new window.TradeCalculator();
-        const csvContent = calculator.exportToCSV(this.currentTrades);
+    /**
+     * Export trades to CSV
+     */
+    exportTrades() {
+        if (this.currentTrades.length === 0) {
+            this.showToast('No trades to export', 'warning');
+            return;
+        }
 
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        try {
+            const calculator = new window.TradeCalculator();
+            const csvContent = calculator.exportToCSV(this.currentTrades);
 
-        a.href = url;
-        a.download = `tradle-trades-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
 
-        window.URL.revokeObjectURL(url);
+            a.href = url;
+            a.download = `tradle-trades-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
 
-        this.showToast('Trades exported successfully!', 'success');
-    } catch (error) {
-        this.showToast('Export failed: ' + error.message, 'error');
+            window.URL.revokeObjectURL(url);
+
+            this.showToast('Trades exported successfully!', 'success');
+        } catch (error) {
+            this.showToast('Export failed: ' + error.message, 'error');
+        }
     }
-}
 
-/**
- * Toggle dark mode
- */
-toggleDarkMode() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const newTheme = isDark ? 'light' : 'dark';
+    /**
+     * Toggle dark mode
+     */
+    toggleDarkMode() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
 
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-
-    const icon = this.darkModeToggle.querySelector('i');
-    const text = this.darkModeToggle.querySelector('span');
-
-    if (newTheme === 'dark') {
-        icon.className = 'fas fa-sun';
-        text.textContent = 'Light Mode';
-    } else {
-        icon.className = 'fas fa-moon';
-        text.textContent = 'Dark Mode';
-    }
-}
-
-/**
- * Initialize dark mode from localStorage
- */
-initializeDarkMode() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
 
         const icon = this.darkModeToggle.querySelector('i');
         const text = this.darkModeToggle.querySelector('span');
 
-        if (savedTheme === 'dark') {
+        if (newTheme === 'dark') {
             icon.className = 'fas fa-sun';
             text.textContent = 'Light Mode';
+        } else {
+            icon.className = 'fas fa-moon';
+            text.textContent = 'Dark Mode';
         }
     }
-}
 
-/**
- * Show loading overlay
- */
-showLoading() {
-    this.loadingOverlay.style.display = 'flex';
-}
+    /**
+     * Initialize dark mode from localStorage
+     */
+    initializeDarkMode() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
 
-/**
- * Hide loading overlay
- */
-hideLoading() {
-    this.loadingOverlay.style.display = 'none';
-}
+            const icon = this.darkModeToggle.querySelector('i');
+            const text = this.darkModeToggle.querySelector('span');
 
-/**
- * Show upload status
- */
-showUploadStatus(message) {
-    this.uploadStatus.style.display = 'block';
-    this.uploadStatus.querySelector('.status-text').textContent = message;
-}
+            if (savedTheme === 'dark') {
+                icon.className = 'fas fa-sun';
+                text.textContent = 'Light Mode';
+            }
+        }
+    }
 
-/**
- * Hide upload status
- */
-hideUploadStatus() {
-    this.uploadStatus.style.display = 'none';
-}
+    /**
+     * Show loading overlay
+     */
+    showLoading() {
+        this.loadingOverlay.style.display = 'flex';
+    }
 
-/**
- * Show dashboard section
- */
-showDashboard() {
-    this.uploadSection.style.display = 'none';
-    this.dashboardSection.style.display = 'block';
-}
+    /**
+     * Hide loading overlay
+     */
+    hideLoading() {
+        this.loadingOverlay.style.display = 'none';
+    }
 
-/**
- * Hide dashboard section
- */
-hideDashboard() {
-    this.uploadSection.style.display = 'block';
-    this.dashboardSection.style.display = 'none';
-}
+    /**
+     * Show upload status
+     */
+    showUploadStatus(message) {
+        this.uploadStatus.style.display = 'block';
+        this.uploadStatus.querySelector('.status-text').textContent = message;
+    }
 
-/**
- * Show toast notification
- */
-showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
+    /**
+     * Hide upload status
+     */
+    hideUploadStatus() {
+        this.uploadStatus.style.display = 'none';
+    }
 
-    toast.innerHTML = `
+    /**
+     * Show dashboard section
+     */
+    showDashboard() {
+        this.uploadSection.style.display = 'none';
+        this.dashboardSection.style.display = 'block';
+    }
+
+    /**
+     * Hide dashboard section
+     */
+    hideDashboard() {
+        this.uploadSection.style.display = 'block';
+        this.dashboardSection.style.display = 'none';
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+
+        toast.innerHTML = `
             <i class="fas ${this.getToastIcon(type)}"></i>
             <span>${message}</span>
         `;
 
-    this.toastContainer.appendChild(toast);
+        this.toastContainer.appendChild(toast);
 
-    // Remove toast after 3 seconds
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-}
-
-/**
- * Get toast icon based on type
- */
-getToastIcon(type) {
-    switch (type) {
-        case 'success': return 'fa-check-circle';
-        case 'error': return 'fa-exclamation-circle';
-        case 'warning': return 'fa-exclamation-triangle';
-        default: return 'fa-info-circle';
-    }
-}
-
-/**
- * Format currency
- */
-formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2
-    }).format(amount);
-}
-
-/**
- * Format date
- */
-formatDate(date) {
-    if (!date) return '';
-    return new Intl.DateTimeFormat('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: '2-digit'
-    }).format(date);
-}
-
-/**
- * Format datetime
- */
-formatDateTime(date) {
-    if (!date) return '';
-    return new Intl.DateTimeFormat('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    }).format(date);
-}
-
-/**
- * Switch between tabs
- */
-switchTab(tabName) {
-    // Remove active class from all tabs
-    this.navTabs.forEach(tab => tab.classList.remove('active'));
-
-    // Hide all sections
-    document.querySelectorAll('.tab-content').forEach(section => {
-        section.style.display = 'none';
-        section.classList.remove('active');
-    });
-
-    // Activate selected tab
-    const activeTab = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
-    if (activeTab) {
-        activeTab.classList.add('active');
-    }
-
-    // Show selected section
-    const sectionMap = {
-        'dashboard': this.dashboardSection,
-        'import': this.importSection,
-        'export': this.exportSection
-    };
-
-    const activeSection = sectionMap[tabName];
-    if (activeSection) {
-        activeSection.style.display = 'block';
-        activeSection.classList.add('active');
-    }
-
-    // Handle special tab behaviors
-    if (tabName === 'dashboard') {
-        // Just show the dashboard with whatever data is already in memory.
-        // Do NOT reload from localStorage here — during an upload flow the new data
-        // hasn't been persisted yet, so reloading would overwrite it with stale data.
-        console.log('🔄 Switching to dashboard tab');
-        console.log(`  🎯 UI currentTrades: ${this.currentTrades.length}`);
-    } else if (tabName === 'import') {
-        // Always show format selection first when import tab is opened
+        // Remove toast after 3 seconds
         setTimeout(() => {
-            this.showFormatSelection();
-        }, 50); // Small delay to ensure DOM is ready
+            toast.remove();
+        }, 3000);
     }
-}
 
-// showDashboard() and hideDashboard() are defined earlier in the class (simple visibility toggle).
-// DO NOT redefine them here — calling switchTab('dashboard') from showDashboard()
-// causes infinite recursion: updateDashboard → showDashboard → switchTab → updateDashboard → ...
+    /**
+     * Get toast icon based on type
+     */
+    getToastIcon(type) {
+        switch (type) {
+            case 'success': return 'fa-check-circle';
+            case 'error': return 'fa-exclamation-circle';
+            case 'warning': return 'fa-exclamation-triangle';
+            default: return 'fa-info-circle';
+        }
+    }
 
-/**
- * Show TradingView upload interface (Step 2)
- */
-showTradingViewUpload() {
-    console.log('🎯 Switching to TradingView upload interface');
+    /**
+     * Format currency
+     */
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2
+        }).format(amount);
+    }
 
-    if (this.formatSelectionContainer && this.tradingviewUploadContainer) {
-        this.formatSelectionContainer.style.display = 'none';
-        this.tradingviewUploadContainer.style.display = 'block';
+    /**
+     * Format date
+     */
+    formatDate(date) {
+        if (!date) return '';
+        return new Intl.DateTimeFormat('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit'
+        }).format(date);
+    }
 
-        // Add animation class for smooth transition
-        this.tradingviewUploadContainer.style.opacity = '0';
-        this.tradingviewUploadContainer.style.transform = 'translateX(20px)';
+    /**
+     * Format datetime
+     */
+    formatDateTime(date) {
+        if (!date) return '';
+        return new Intl.DateTimeFormat('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        }).format(date);
+    }
 
-        requestAnimationFrame(() => {
-            this.tradingviewUploadContainer.style.transition = 'all 0.3s ease-out';
-            this.tradingviewUploadContainer.style.opacity = '1';
-            this.tradingviewUploadContainer.style.transform = 'translateX(0)';
+    /**
+     * Switch between tabs
+     */
+    switchTab(tabName) {
+        // Remove active class from all tabs
+        this.navTabs.forEach(tab => tab.classList.remove('active'));
+
+        // Hide all sections
+        document.querySelectorAll('.tab-content').forEach(section => {
+            section.style.display = 'none';
+            section.classList.remove('active');
         });
 
-        // Show success message
-        this.showToast('TradingView format selected. Upload your CSV file below.', 'success');
+        // Activate selected tab
+        const activeTab = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        }
+
+        // Show selected section
+        const sectionMap = {
+            'dashboard': this.dashboardSection,
+            'import': this.importSection,
+            'export': this.exportSection
+        };
+
+        const activeSection = sectionMap[tabName];
+        if (activeSection) {
+            activeSection.style.display = 'block';
+            activeSection.classList.add('active');
+        }
+
+        // Handle special tab behaviors
+        if (tabName === 'dashboard') {
+            // Just show the dashboard with whatever data is already in memory.
+            // Do NOT reload from localStorage here — during an upload flow the new data
+            // hasn't been persisted yet, so reloading would overwrite it with stale data.
+            console.log('🔄 Switching to dashboard tab');
+            console.log(`  🎯 UI currentTrades: ${this.currentTrades.length}`);
+        } else if (tabName === 'import') {
+            // Always show format selection first when import tab is opened
+            setTimeout(() => {
+                this.showFormatSelection();
+            }, 50); // Small delay to ensure DOM is ready
+        }
     }
-}
 
-/**
- * Show format selection interface (Step 1)
- */
-showFormatSelection() {
-    console.log('🔙 Returning to format selection');
+    // showDashboard() and hideDashboard() are defined earlier in the class (simple visibility toggle).
+    // DO NOT redefine them here — calling switchTab('dashboard') from showDashboard()
+    // causes infinite recursion: updateDashboard → showDashboard → switchTab → updateDashboard → ...
 
-    if (this.formatSelectionContainer && this.tradingviewUploadContainer) {
-        this.tradingviewUploadContainer.style.display = 'none';
-        this.formatSelectionContainer.style.display = 'block';
+    /**
+     * Show TradingView upload interface (Step 2)
+     */
+    showTradingViewUpload() {
+        console.log('🎯 Switching to TradingView upload interface');
 
-        // Add animation class for smooth transition
-        this.formatSelectionContainer.style.opacity = '0';
-        this.formatSelectionContainer.style.transform = 'translateX(-20px)';
+        if (this.formatSelectionContainer && this.tradingviewUploadContainer) {
+            this.formatSelectionContainer.style.display = 'none';
+            this.tradingviewUploadContainer.style.display = 'block';
 
-        requestAnimationFrame(() => {
-            this.formatSelectionContainer.style.transition = 'all 0.3s ease-out';
-            this.formatSelectionContainer.style.opacity = '1';
-            this.formatSelectionContainer.style.transform = 'translateX(0)';
-        });
+            // Add animation class for smooth transition
+            this.tradingviewUploadContainer.style.opacity = '0';
+            this.tradingviewUploadContainer.style.transform = 'translateX(20px)';
 
-        // Reset any upload status
-        this.hideUploadStatus();
+            requestAnimationFrame(() => {
+                this.tradingviewUploadContainer.style.transition = 'all 0.3s ease-out';
+                this.tradingviewUploadContainer.style.opacity = '1';
+                this.tradingviewUploadContainer.style.transform = 'translateX(0)';
+            });
 
-        // Clear file input
-        if (this.csvFileInput) {
-            this.csvFileInput.value = '';
+            // Show success message
+            this.showToast('TradingView format selected. Upload your CSV file below.', 'success');
+        }
+    }
+
+    /**
+     * Show format selection interface (Step 1)
+     */
+    showFormatSelection() {
+        console.log('🔙 Returning to format selection');
+
+        if (this.formatSelectionContainer && this.tradingviewUploadContainer) {
+            this.tradingviewUploadContainer.style.display = 'none';
+            this.formatSelectionContainer.style.display = 'block';
+
+            // Add animation class for smooth transition
+            this.formatSelectionContainer.style.opacity = '0';
+            this.formatSelectionContainer.style.transform = 'translateX(-20px)';
+
+            requestAnimationFrame(() => {
+                this.formatSelectionContainer.style.transition = 'all 0.3s ease-out';
+                this.formatSelectionContainer.style.opacity = '1';
+                this.formatSelectionContainer.style.transform = 'translateX(0)';
+            });
+
+            // Reset any upload status
+            this.hideUploadStatus();
+
+            // Clear file input
+            if (this.csvFileInput) {
+                this.csvFileInput.value = '';
+            }
         }
     }
 }
