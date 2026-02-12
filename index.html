@@ -605,52 +605,49 @@
             </div>
         </main>
 
-        <!-- Day Journal Modal (Calendar Day Drill-down + Notion Journal) -->
+        <!-- Day Trades Modal (Calendar Day Drill-down) -->
         <div class="modal day-trades-modal" id="chartModal">
-            <div class="modal-content day-journal-modal-content">
-                <div class="modal-header journal-modal-header">
+            <div class="modal-content day-trades-modal-content">
+                <div class="modal-header">
                     <h3 id="chartModalTitle"><i class="fas fa-calendar-day"></i> Trades</h3>
                     <button class="modal-close" id="chartModalClose">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <!-- Tabs: Trades | Journal -->
-                <div class="journal-tabs">
-                    <button class="journal-tab active" data-tab="trades">
-                        <i class="fas fa-chart-line"></i> Trades
-                    </button>
-                    <button class="journal-tab" data-tab="journal">
-                        <i class="fas fa-book-open"></i> Journal
+                <div class="modal-body" id="chartModalTrades">
+                    <!-- Trade cards will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Modal (separate Notion-style full-page popup) -->
+        <div class="modal journal-modal" id="journalModal">
+            <div class="modal-content journal-modal-content">
+                <div class="modal-header journal-modal-header">
+                    <h3 id="journalModalTitle"><i class="fas fa-book-open"></i> Trade Journal</h3>
+                    <button class="modal-close" id="journalModalClose">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <!-- Tab: Trades (existing trade cards) -->
-                <div class="journal-tab-content active" id="journalTabTrades" data-tab="trades">
-                    <div class="modal-body" id="chartModalTrades">
-                        <!-- Trade cards will be injected here -->
+                <div class="modal-body journal-body" id="journalModalBody">
+                    <!-- Day-level notes -->
+                    <div class="journal-section">
+                        <div class="journal-section-label"><i class="fas fa-sticky-note"></i> Day Notes</div>
+                        <textarea class="journal-day-notes" id="journalDayNotes"
+                            placeholder="How was your trading day? Write your thoughts, observations, emotions..."></textarea>
                     </div>
-                </div>
-                <!-- Tab: Journal (Notion-style notes + screenshots) -->
-                <div class="journal-tab-content" id="journalTabJournal" data-tab="journal">
-                    <div class="modal-body journal-body">
-                        <!-- Day-level notes -->
-                        <div class="journal-section">
-                            <div class="journal-section-label"><i class="fas fa-sticky-note"></i> Day Notes</div>
-                            <textarea class="journal-day-notes" id="journalDayNotes"
-                                placeholder="How was your trading day? Write your thoughts, observations, emotions..."></textarea>
-                        </div>
-                        <!-- Per-trade journal entries (injected by JS) -->
-                        <div class="journal-trades-entries" id="journalTradesEntries">
-                            <!-- Per-trade note + screenshot blocks will go here -->
-                        </div>
-                        <!-- Save indicator -->
-                        <div class="journal-save-bar">
-                            <span class="journal-save-status" id="journalSaveStatus">
-                                <i class="fas fa-cloud"></i> All changes saved
-                            </span>
-                            <button class="btn btn-primary btn-sm" id="journalSaveBtn">
-                                <i class="fas fa-save"></i> Save
-                            </button>
-                        </div>
+                    <!-- Per-trade journal entries (injected by JS) -->
+                    <div class="journal-trades-entries" id="journalTradesEntries">
+                        <!-- Per-trade note + screenshot blocks will go here -->
+                    </div>
+                    <!-- Save indicator -->
+                    <div class="journal-save-bar">
+                        <span class="journal-save-status" id="journalSaveStatus">
+                            <i class="fas fa-cloud"></i> All changes saved
+                        </span>
+                        <button class="btn btn-primary btn-sm" id="journalSaveBtn">
+                            <i class="fas fa-save"></i> Save
+                        </button>
                     </div>
                 </div>
             </div>

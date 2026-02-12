@@ -780,6 +780,7 @@ class UIController {
         const [y, m, d] = dayKey.split('-');
         const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
         const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+        this._journalDateStr = dateStr;
 
         const trades = dayData.tradeList || [];
 
@@ -798,7 +799,13 @@ class UIController {
             return raw.replace(/^[A-Z_]+:/, '');
         }).filter(Boolean))];
         const symbolsDisplay = uniqueSymbols.length ? uniqueSymbols.join(', ') : '-';
+
+        // Day-level "Open Journal" button at top
+        const hasJournal = this._dayHasJournal(dayKey);
         let html = `
+            <button class="btn-day-journal" id="btnDayJournal">
+                <i class="fas fa-book-open"></i> ${hasJournal ? 'Open Journal' : 'Write in Journal'}
+            </button>
             <div class="day-trades-summary">
                 <div class="summary-stat"><div class="stat-value">${trades.length}</div><div class="stat-label">Trades</div></div>
                 <div class="summary-stat"><div class="stat-value" style="color:var(--success-color)">${wins} W</div><div class="stat-label">Wins</div></div>
@@ -821,6 +828,7 @@ class UIController {
             const duration = trade.duration || '-';
             const rawSymbol = trade.contract || trade.symbol || 'Unknown';
             const tvSymbol = rawSymbol.includes(':') ? rawSymbol : `CME_MINI:${rawSymbol}`;
+            const tradeId = trade.orderId || trade.orderID || `trade_${i}`;
 
             // Format entry/exit times
             let entryTimeStr = '-', exitTimeStr = '-';
@@ -833,7 +841,7 @@ class UIController {
                 if (!isNaN(xt.getTime())) exitTimeStr = xt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             } catch (e) { /* ignore */ }
 
-            // Build TradingView URL — opens the chart on your TradingView account
+            // Build TradingView URL
             const tvUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}&interval=5`;
 
             const displaySymbol = rawSymbol.replace(/^[A-Z_]+:/, '');
@@ -851,46 +859,93 @@ class UIController {
                     <a class="btn-open-tradingview" href="${tvUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
                         <i class="fas fa-external-link-alt"></i> View on TradingView
                     </a>
+                    <button class="btn-open-journal" data-trade-id="${tradeId}" onclick="event.stopPropagation()">
+                        <i class="fas fa-book-open"></i> Open Journal
+                    </button>
                 </div>
             `;
         });
 
         tradesEl.innerHTML = html;
 
-        // ---- Set up tabs ----
-        this._initJournalTabs();
+        // Bind day-level journal button
+        const dayJournalBtn = document.getElementById('btnDayJournal');
+        if (dayJournalBtn) {
+            dayJournalBtn.onclick = () => this.openJournalModal(dayKey, trades);
+        }
 
-        // ---- Populate journal tab ----
-        this._populateJournalTab(dayKey, trades);
+        // Bind per-trade journal buttons
+        tradesEl.querySelectorAll('.btn-open-journal').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this.openJournalModal(dayKey, trades, btn.dataset.tradeId);
+            };
+        });
 
-        // Show modal — default to Trades tab
-        this._switchJournalTab('trades');
+        // Show modal
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
 
         // Close handlers
         const closeBtn = document.getElementById('chartModalClose');
-        const closeHandler = () => this.closeDayChartModal();
-        if (closeBtn) {
-            closeBtn.onclick = closeHandler;
-        }
+        if (closeBtn) closeBtn.onclick = () => this.closeDayChartModal();
         modal.onclick = (e) => {
             if (e.target === modal) this.closeDayChartModal();
         };
     }
 
-    // ===== Journal Tab System =====
+    // ===== Separate Journal Modal =====
 
-    _initJournalTabs() {
-        const tabs = document.querySelectorAll('.journal-tab');
-        tabs.forEach(tab => {
-            tab.onclick = () => this._switchJournalTab(tab.dataset.tab);
-        });
+    /**
+     * Open the standalone Notion-style journal modal.
+     * @param {string} dayKey - e.g. "2026-02-11"
+     * @param {Array} trades - array of trade objects for the day
+     * @param {string} [focusTradeId] - if provided, scroll to and expand that trade
+     */
+    openJournalModal(dayKey, trades, focusTradeId) {
+        const modal = document.getElementById('journalModal');
+        const titleEl = document.getElementById('journalModalTitle');
+        if (!modal) return;
+
+        // Title
+        if (titleEl) {
+            titleEl.innerHTML = `<i class="fas fa-book-open"></i> Journal — ${this._journalDateStr || dayKey}`;
+        }
+
+        // Populate content
+        this._populateJournalTab(dayKey, trades, focusTradeId);
+
+        // Show modal (on top of the trades modal)
+        modal.classList.add('active');
+
+        // Close handlers
+        const closeBtn = document.getElementById('journalModalClose');
+        if (closeBtn) closeBtn.onclick = () => this.closeJournalModal();
+        modal.onclick = (e) => {
+            if (e.target === modal) this.closeJournalModal();
+        };
+
+        // Escape key
+        this._journalEscHandler = (e) => {
+            if (e.key === 'Escape') this.closeJournalModal();
+        };
+        document.addEventListener('keydown', this._journalEscHandler);
     }
 
-    _switchJournalTab(tabName) {
-        document.querySelectorAll('.journal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
-        document.querySelectorAll('.journal-tab-content').forEach(c => c.classList.toggle('active', c.dataset.tab === tabName));
+    closeJournalModal() {
+        // Auto-save on close
+        if (this._journalAutoSave) {
+            this._journalAutoSave();
+            this._journalAutoSave = null;
+        }
+        const modal = document.getElementById('journalModal');
+        if (modal) modal.classList.remove('active');
+        if (this._journalEscHandler) {
+            document.removeEventListener('keydown', this._journalEscHandler);
+            this._journalEscHandler = null;
+        }
+        // Re-render calendar to update journal indicators
+        this.renderCalendar();
     }
 
     // ===== Journal Data Persistence =====
@@ -931,7 +986,7 @@ class UIController {
 
     // ===== Populate Journal Tab =====
 
-    _populateJournalTab(dayKey, trades) {
+    _populateJournalTab(dayKey, trades, focusTradeId) {
         const journal = this._loadJournal(dayKey);
 
         // Day notes
@@ -957,6 +1012,8 @@ class UIController {
             const side = trade.side || 'LONG';
             const qty = trade.quantity ?? trade.qty ?? 1;
             const tradeJournal = (journal.trades && journal.trades[tradeId]) || { note: '', screenshots: [] };
+            // Collapse all trades by default unless this is the focused one
+            const collapsed = focusTradeId && focusTradeId !== tradeId ? ' collapsed' : '';
 
             entriesHtml += `
                 <div class="journal-trade-entry" data-trade-id="${tradeId}">
@@ -967,7 +1024,7 @@ class UIController {
                         </div>
                         <span class="journal-trade-pnl ${pnlClass}">${this.formatCurrency(pnl)}</span>
                     </div>
-                    <div class="journal-trade-entry-body">
+                    <div class="journal-trade-entry-body${collapsed}">
                         <textarea class="journal-trade-notes" data-trade-id="${tradeId}"
                             placeholder="Notes for this trade: what was your setup? entry reason? exit reason? emotions?">${this._escapeHtml(tradeJournal.note || '')}</textarea>
                         <div class="journal-screenshots-label"><i class="fas fa-camera"></i> Screenshots</div>
@@ -989,6 +1046,14 @@ class UIController {
         });
 
         container.innerHTML = entriesHtml;
+
+        // Scroll to focused trade after render
+        if (focusTradeId) {
+            requestAnimationFrame(() => {
+                const focusEl = container.querySelector(`.journal-trade-entry[data-trade-id="${focusTradeId}"]`);
+                if (focusEl) focusEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
 
         // ---- Bind events ----
         this._bindJournalEvents(dayKey, trades);
@@ -1036,9 +1101,9 @@ class UIController {
         });
 
         // Paste screenshots anywhere in journal
-        const journalTab = document.getElementById('journalTabJournal');
-        if (journalTab) {
-            journalTab.onpaste = (e) => this._handlePasteScreenshot(e, dayKey, trades);
+        const journalBody = document.getElementById('journalModalBody');
+        if (journalBody) {
+            journalBody.onpaste = (e) => this._handlePasteScreenshot(e, dayKey, trades);
         }
 
         // Auto-save on tab switch away from journal, and on modal close
@@ -1230,11 +1295,6 @@ class UIController {
      * Close the day trades modal
      */
     closeDayChartModal() {
-        // Auto-save journal on close
-        if (this._journalAutoSave) {
-            this._journalAutoSave();
-            this._journalAutoSave = null;
-        }
         const modal = document.getElementById('chartModal');
         if (modal) {
             modal.classList.remove('active');

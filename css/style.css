@@ -1991,12 +1991,10 @@ body {
 }
 
 /* ===== Day Trades Modal ===== */
-.day-trades-modal .day-journal-modal-content {
-    max-width: 680px;
+.day-trades-modal .day-trades-modal-content {
+    max-width: 520px;
     width: 95vw;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
+    max-height: 85vh;
 }
 
 .day-trades-modal .modal-body {
@@ -2714,58 +2712,80 @@ body {
     font-size: var(--font-size-sm);
 }
 
-/* Responsive Design for Format Cards */
-@media (max-width: 768px) {
+/* ===== Journal Modal (separate popup) ===== */
+.journal-modal {
+    z-index: 1100;
+}
 
-    /* ===== Journal Tabs ===== */
-    .journal-modal-header {
-        border-bottom: none;
-        padding-bottom: var(--spacing-2);
-    }
+.journal-modal .journal-modal-content {
+    max-width: 640px;
+    width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
 
-    .journal-tabs {
-        display: flex;
-        border-bottom: 1px solid var(--border-light);
-        padding: 0 var(--spacing-6);
-        gap: var(--spacing-1);
-    }
+.journal-modal .journal-modal-header {
+    border-bottom: 1px solid var(--border-light);
+}
 
-    .journal-tab {
-        background: none;
-        border: none;
-        padding: var(--spacing-2) var(--spacing-4);
-        font-size: var(--font-size-sm);
-        font-weight: 500;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
+.journal-modal .journal-modal-header h3 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
 
-    .journal-tab:hover {
-        color: var(--text-primary);
-        background: var(--bg-secondary);
-        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    }
+/* ===== Open Journal Button (on trade cards + day level) ===== */
+.btn-open-journal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    margin-top: 4px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--primary-color);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
 
-    .journal-tab.active {
-        color: var(--primary-color);
-        border-bottom-color: var(--primary-color);
-        font-weight: 600;
-    }
+.btn-open-journal:hover {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: var(--primary-color);
+}
 
-    .journal-tab-content {
-        display: none;
-        flex: 1;
-        overflow: hidden;
-    }
+.btn-open-journal i {
+    font-size: 11px;
+}
 
-    .journal-tab-content.active {
-        display: flex;
-        flex-direction: column;
+.btn-day-journal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 16px;
+    margin-bottom: var(--spacing-4);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.08));
+    border: 1px dashed var(--primary-color);
+    border-radius: var(--radius-md);
+    color: var(--primary-color);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-day-journal:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
     }
 
     /* ===== Notion-Themed Journal Body ===== */
@@ -3100,21 +3120,15 @@ body {
 
     /* Responsive journal */
     @media (max-width: 768px) {
-        .day-trades-modal .day-journal-modal-content {
-            max-width: 100vw;
-            width: 100vw;
-            max-height: 100vh;
-            border-radius: 0;
-        }
-
-        .journal-screenshot-grid {
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-        }
-
-        .journal-tabs {
-            padding: 0 var(--spacing-3);
-        }
+    .journal-modal .journal-modal-content {
+        max-width: 100vw;
+        width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
     }
+
+    .journal-screenshot-grid {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
 
     /* Responsive Design for Format Cards */
     @media (max-width: 768px) {
