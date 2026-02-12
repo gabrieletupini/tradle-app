@@ -50,6 +50,18 @@ class TradleApp {
             console.warn('⚠️ ImageStore init error (screenshots may not work):', e);
         }
 
+        // Pull journal data from GitHub (notes + screenshots from other devices)
+        try {
+            if (typeof GitHubSync !== 'undefined') {
+                const journalSync = await GitHubSync.pullJournalData();
+                if (journalSync.success && (journalSync.mergedNotes > 0 || journalSync.mergedScreenshots > 0)) {
+                    console.log(`📥 Merged remote journal: ${journalSync.mergedNotes} days, ${journalSync.mergedScreenshots} screenshots`);
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Remote journal sync error:', e);
+        }
+
         // Load persistent trade database
         this.loadTradeDatabase();
 

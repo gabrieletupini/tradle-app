@@ -1260,6 +1260,9 @@ class UIController {
         });
 
         this._saveJournal(dayKey, journal);
+
+        // Sync to GitHub (debounced — won't fire on every keystroke)
+        if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
     }
 
     // ===== Screenshot Add (File Picker) — saves to IndexedDB =====
@@ -1276,6 +1279,7 @@ class UIController {
                     const imgId = await ImageStore.save(dayKey, tradeId, dataUrl);
                     this._addScreenshotToGrid(tradeId, dataUrl, imgId);
                     this._setJournalSaveStatus(true);
+                    if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
                 });
             });
         };
@@ -1307,6 +1311,7 @@ class UIController {
                     const imgId = await ImageStore.save(dayKey, targetTradeId, dataUrl);
                     this._addScreenshotToGrid(targetTradeId, dataUrl, imgId);
                     this._setJournalSaveStatus(true);
+                    if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
                 });
             }
         }
@@ -1320,6 +1325,7 @@ class UIController {
         }
         if (thumbEl) thumbEl.remove();
         this._setJournalSaveStatus(true);
+        if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
     }
 
     // ===== Add Screenshot to DOM Grid =====
