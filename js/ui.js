@@ -703,8 +703,11 @@ class UIController {
                     return raw.replace(/^[A-Z_]+:/, '');  // Strip exchange prefix
                 }).filter(Boolean))] : [];
 
-                html += `<div class="${classes} clickable" data-day-key="${key}" title="Click to view trades">`;
+                html += `<div class="${classes} clickable" data-day-key="${key}" title="Click to view trades" style="position:relative">`;
                 html += `<div class="calendar-day-number">${day}</div>`;
+                if (this._dayHasJournal(key)) {
+                    html += `<div class="journal-indicator"><i class="fas fa-book-open"></i></div>`;
+                }
                 if (daySymbols.length) {
                     html += `<div class="calendar-day-symbols">${daySymbols.join(', ')}</div>`;
                 }
@@ -768,6 +771,10 @@ class UIController {
         const titleEl = document.getElementById('chartModalTitle');
         const tradesEl = document.getElementById('chartModalTrades');
         if (!modal || !tradesEl) return;
+
+        // Store context for journal
+        this._journalDayKey = dayKey;
+        this._journalDayTrades = dayData.tradeList || [];
 
         // Parse the day key for display
         const [y, m, d] = dayKey.split('-');
@@ -850,7 +857,14 @@ class UIController {
 
         tradesEl.innerHTML = html;
 
-        // Show modal
+        // ---- Set up tabs ----
+        this._initJournalTabs();
+
+        // ---- Populate journal tab ----
+        this._populateJournalTab(dayKey, trades);
+
+        // Show modal — default to Trades tab
+        this._switchJournalTab('trades');
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
 
@@ -865,10 +879,362 @@ class UIController {
         };
     }
 
+    // ===== Journal Tab System =====
+
+    _initJournalTabs() {
+        const tabs = document.querySelectorAll('.journal-tab');
+        tabs.forEach(tab => {
+            tab.onclick = () => this._switchJournalTab(tab.dataset.tab);
+        });
+    }
+
+    _switchJournalTab(tabName) {
+        document.querySelectorAll('.journal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+        document.querySelectorAll('.journal-tab-content').forEach(c => c.classList.toggle('active', c.dataset.tab === tabName));
+    }
+
+    // ===== Journal Data Persistence =====
+
+    _getJournalKey(dayKey) {
+        return `tradle_journal_${dayKey}`;
+    }
+
+    _loadJournal(dayKey) {
+        try {
+            const raw = localStorage.getItem(this._getJournalKey(dayKey));
+            if (raw) return JSON.parse(raw);
+        } catch (e) { console.warn('Failed to load journal:', e); }
+        return { dayNotes: '', trades: {} };
+    }
+
+    _saveJournal(dayKey, data) {
+        try {
+            localStorage.setItem(this._getJournalKey(dayKey), JSON.stringify(data));
+            this._setJournalSaveStatus(true);
+        } catch (e) {
+            console.error('Failed to save journal:', e);
+            this._setJournalSaveStatus(false, 'Storage full — clear old data');
+        }
+    }
+
+    _setJournalSaveStatus(saved, msg) {
+        const el = document.getElementById('journalSaveStatus');
+        if (!el) return;
+        if (saved) {
+            el.className = 'journal-save-status saved';
+            el.innerHTML = '<i class="fas fa-check-circle"></i> All changes saved';
+        } else {
+            el.className = 'journal-save-status unsaved';
+            el.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${msg || 'Unsaved changes'}`;
+        }
+    }
+
+    // ===== Populate Journal Tab =====
+
+    _populateJournalTab(dayKey, trades) {
+        const journal = this._loadJournal(dayKey);
+
+        // Day notes
+        const dayNotesEl = document.getElementById('journalDayNotes');
+        if (dayNotesEl) {
+            dayNotesEl.value = journal.dayNotes || '';
+            dayNotesEl.oninput = () => this._setJournalSaveStatus(false, 'Unsaved changes');
+        }
+
+        // Per-trade entries
+        const container = document.getElementById('journalTradesEntries');
+        if (!container) return;
+
+        let entriesHtml = '';
+        trades.forEach((trade, i) => {
+            const tradeId = trade.orderId || trade.orderID || `trade_${i}`;
+            const pnl = trade.netProfit ?? trade.returnValue ?? trade.return ?? 0;
+            const status = trade.status || (pnl >= 0 ? 'WIN' : 'LOSE');
+            const statusClass = status === 'WIN' ? 'win' : 'lose';
+            const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+            const rawSymbol = trade.contract || trade.symbol || 'Unknown';
+            const displaySymbol = rawSymbol.replace(/^[A-Z_]+:/, '');
+            const side = trade.side || 'LONG';
+            const qty = trade.quantity ?? trade.qty ?? 1;
+            const tradeJournal = (journal.trades && journal.trades[tradeId]) || { note: '', screenshots: [] };
+
+            entriesHtml += `
+                <div class="journal-trade-entry" data-trade-id="${tradeId}">
+                    <div class="journal-trade-entry-header" onclick="this.nextElementSibling.classList.toggle('collapsed')">
+                        <div class="journal-trade-title">
+                            <span class="trade-badge ${statusClass}">${status}</span>
+                            Trade ${i + 1} · ${displaySymbol} · ${side} × ${qty}
+                        </div>
+                        <span class="journal-trade-pnl ${pnlClass}">${this.formatCurrency(pnl)}</span>
+                    </div>
+                    <div class="journal-trade-entry-body">
+                        <textarea class="journal-trade-notes" data-trade-id="${tradeId}"
+                            placeholder="Notes for this trade: what was your setup? entry reason? exit reason? emotions?">${this._escapeHtml(tradeJournal.note || '')}</textarea>
+                        <div class="journal-screenshots-label"><i class="fas fa-camera"></i> Screenshots</div>
+                        <div class="journal-screenshot-grid" data-trade-id="${tradeId}">
+                            ${(tradeJournal.screenshots || []).map((src, si) => `
+                                <div class="journal-screenshot-thumb" data-index="${si}">
+                                    <img src="${src}" alt="Screenshot ${si + 1}" loading="lazy">
+                                    <button class="screenshot-remove" data-trade-id="${tradeId}" data-index="${si}" title="Remove">&times;</button>
+                                </div>
+                            `).join('')}
+                            <div class="journal-screenshot-add" data-trade-id="${tradeId}">
+                                <i class="fas fa-plus"></i>
+                                <span class="add-label">Add</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = entriesHtml;
+
+        // ---- Bind events ----
+        this._bindJournalEvents(dayKey, trades);
+    }
+
+    _escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ===== Journal Event Binding =====
+
+    _bindJournalEvents(dayKey, trades) {
+        // Save button
+        const saveBtn = document.getElementById('journalSaveBtn');
+        if (saveBtn) {
+            saveBtn.onclick = () => this._saveCurrentJournal(dayKey, trades);
+        }
+
+        // Per-trade note change → mark unsaved
+        document.querySelectorAll('.journal-trade-notes').forEach(ta => {
+            ta.oninput = () => this._setJournalSaveStatus(false, 'Unsaved changes');
+        });
+
+        // Screenshot add buttons
+        document.querySelectorAll('.journal-screenshot-add').forEach(btn => {
+            btn.onclick = () => this._handleScreenshotAdd(btn.dataset.tradeId, dayKey, trades);
+        });
+
+        // Screenshot remove buttons
+        document.querySelectorAll('.screenshot-remove').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this._handleScreenshotRemove(btn.dataset.tradeId, parseInt(btn.dataset.index), dayKey, trades);
+            };
+        });
+
+        // Screenshot thumbnails → lightbox
+        document.querySelectorAll('.journal-screenshot-thumb img').forEach(img => {
+            img.onclick = (e) => {
+                e.stopPropagation();
+                this._openScreenshotLightbox(img.src);
+            };
+        });
+
+        // Paste screenshots anywhere in journal
+        const journalTab = document.getElementById('journalTabJournal');
+        if (journalTab) {
+            journalTab.onpaste = (e) => this._handlePasteScreenshot(e, dayKey, trades);
+        }
+
+        // Auto-save on tab switch away from journal, and on modal close
+        this._journalAutoSave = () => this._saveCurrentJournal(dayKey, trades);
+    }
+
+    // ===== Save Current Journal State =====
+
+    _saveCurrentJournal(dayKey, trades) {
+        const dayNotesEl = document.getElementById('journalDayNotes');
+        const journal = {
+            dayNotes: dayNotesEl ? dayNotesEl.value : '',
+            trades: {}
+        };
+
+        trades.forEach((trade, i) => {
+            const tradeId = trade.orderId || trade.orderID || `trade_${i}`;
+            const noteEl = document.querySelector(`.journal-trade-notes[data-trade-id="${tradeId}"]`);
+            const gridEl = document.querySelector(`.journal-screenshot-grid[data-trade-id="${tradeId}"]`);
+
+            // Collect screenshots from existing thumbs
+            const screenshots = [];
+            if (gridEl) {
+                gridEl.querySelectorAll('.journal-screenshot-thumb img').forEach(img => {
+                    screenshots.push(img.src);
+                });
+            }
+
+            journal.trades[tradeId] = {
+                note: noteEl ? noteEl.value : '',
+                screenshots
+            };
+        });
+
+        this._saveJournal(dayKey, journal);
+    }
+
+    // ===== Screenshot Add (File Picker) =====
+
+    _handleScreenshotAdd(tradeId, dayKey, trades) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        input.onchange = () => {
+            if (!input.files.length) return;
+            Array.from(input.files).forEach(file => {
+                this._readImageFile(file, (dataUrl) => {
+                    this._addScreenshotToGrid(tradeId, dataUrl);
+                    this._saveCurrentJournal(dayKey, trades);
+                });
+            });
+        };
+        input.click();
+    }
+
+    // ===== Screenshot Paste =====
+
+    _handlePasteScreenshot(e, dayKey, trades) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        // Find which trade entry is focused (or default to first)
+        const focused = document.activeElement;
+        let targetTradeId = null;
+        if (focused && focused.dataset.tradeId) {
+            targetTradeId = focused.dataset.tradeId;
+        } else {
+            // Default to the first trade
+            const firstEntry = document.querySelector('.journal-trade-entry');
+            if (firstEntry) targetTradeId = firstEntry.dataset.tradeId;
+        }
+        if (!targetTradeId) return;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                const file = items[i].getAsFile();
+                this._readImageFile(file, (dataUrl) => {
+                    this._addScreenshotToGrid(targetTradeId, dataUrl);
+                    this._saveCurrentJournal(dayKey, trades);
+                });
+            }
+        }
+    }
+
+    // ===== Screenshot Remove =====
+
+    _handleScreenshotRemove(tradeId, index, dayKey, trades) {
+        const grid = document.querySelector(`.journal-screenshot-grid[data-trade-id="${tradeId}"]`);
+        if (!grid) return;
+        const thumbs = grid.querySelectorAll('.journal-screenshot-thumb');
+        if (thumbs[index]) {
+            thumbs[index].remove();
+            this._saveCurrentJournal(dayKey, trades);
+        }
+    }
+
+    // ===== Add Screenshot to DOM Grid =====
+
+    _addScreenshotToGrid(tradeId, dataUrl) {
+        const grid = document.querySelector(`.journal-screenshot-grid[data-trade-id="${tradeId}"]`);
+        if (!grid) return;
+        const addBtn = grid.querySelector('.journal-screenshot-add');
+        const thumbCount = grid.querySelectorAll('.journal-screenshot-thumb').length;
+
+        const thumb = document.createElement('div');
+        thumb.className = 'journal-screenshot-thumb';
+        thumb.dataset.index = thumbCount;
+        thumb.innerHTML = `
+            <img src="${dataUrl}" alt="Screenshot" loading="lazy">
+            <button class="screenshot-remove" data-trade-id="${tradeId}" data-index="${thumbCount}" title="Remove">&times;</button>
+        `;
+
+        // Insert before the add button
+        grid.insertBefore(thumb, addBtn);
+
+        // Bind events on new thumb
+        thumb.querySelector('img').onclick = (e) => {
+            e.stopPropagation();
+            this._openScreenshotLightbox(dataUrl);
+        };
+        thumb.querySelector('.screenshot-remove').onclick = (e) => {
+            e.stopPropagation();
+            thumb.remove();
+            if (this._journalAutoSave) this._journalAutoSave();
+        };
+    }
+
+    // ===== Read Image to Data URL =====
+
+    _readImageFile(file, callback) {
+        // Resize large images to save localStorage space
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxW = 1200;
+                const maxH = 900;
+                let w = img.width, h = img.height;
+                if (w > maxW || h > maxH) {
+                    const ratio = Math.min(maxW / w, maxH / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                callback(canvas.toDataURL('image/jpeg', 0.82));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ===== Screenshot Lightbox =====
+
+    _openScreenshotLightbox(src) {
+        const lb = document.createElement('div');
+        lb.className = 'screenshot-lightbox';
+        lb.innerHTML = `<img src="${src}" alt="Screenshot">`;
+        lb.onclick = () => lb.remove();
+        document.addEventListener('keydown', function handler(e) {
+            if (e.key === 'Escape') { lb.remove(); document.removeEventListener('keydown', handler); }
+        });
+        document.body.appendChild(lb);
+    }
+
+    // ===== Check if a day has journal data (for calendar indicator) =====
+
+    _dayHasJournal(dayKey) {
+        try {
+            const raw = localStorage.getItem(this._getJournalKey(dayKey));
+            if (!raw) return false;
+            const j = JSON.parse(raw);
+            if (j.dayNotes && j.dayNotes.trim()) return true;
+            if (j.trades) {
+                for (const tid of Object.keys(j.trades)) {
+                    const t = j.trades[tid];
+                    if ((t.note && t.note.trim()) || (t.screenshots && t.screenshots.length)) return true;
+                }
+            }
+        } catch (e) { /* ignore */ }
+        return false;
+    }
+
     /**
      * Close the day trades modal
      */
     closeDayChartModal() {
+        // Auto-save journal on close
+        if (this._journalAutoSave) {
+            this._journalAutoSave();
+            this._journalAutoSave = null;
+        }
         const modal = document.getElementById('chartModal');
         if (modal) {
             modal.classList.remove('active');

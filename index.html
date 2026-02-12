@@ -40,8 +40,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/responsive.css?v=4">
 </head>
 
 <body>
@@ -361,7 +361,8 @@
                                                 <i class="fas fa-sync-alt"></i>
                                                 <h4>Loading Default Data...</h4>
                                                 <p>Default trading data is loading. Upload your own CSV in the
-                                                    <strong>Import Data</strong> tab to update.</p>
+                                                    <strong>Import Data</strong> tab to update.
+                                                </p>
                                             </div>
                                         </td>
                                     </tr>
@@ -604,17 +605,53 @@
             </div>
         </main>
 
-        <!-- Day Trades Modal (Calendar Day Drill-down) -->
+        <!-- Day Journal Modal (Calendar Day Drill-down + Notion Journal) -->
         <div class="modal day-trades-modal" id="chartModal">
-            <div class="modal-content day-trades-modal-content">
-                <div class="modal-header">
+            <div class="modal-content day-journal-modal-content">
+                <div class="modal-header journal-modal-header">
                     <h3 id="chartModalTitle"><i class="fas fa-calendar-day"></i> Trades</h3>
                     <button class="modal-close" id="chartModalClose">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body" id="chartModalTrades">
-                    <!-- Trade cards will be injected here -->
+                <!-- Tabs: Trades | Journal -->
+                <div class="journal-tabs">
+                    <button class="journal-tab active" data-tab="trades">
+                        <i class="fas fa-chart-line"></i> Trades
+                    </button>
+                    <button class="journal-tab" data-tab="journal">
+                        <i class="fas fa-book-open"></i> Journal
+                    </button>
+                </div>
+                <!-- Tab: Trades (existing trade cards) -->
+                <div class="journal-tab-content active" id="journalTabTrades" data-tab="trades">
+                    <div class="modal-body" id="chartModalTrades">
+                        <!-- Trade cards will be injected here -->
+                    </div>
+                </div>
+                <!-- Tab: Journal (Notion-style notes + screenshots) -->
+                <div class="journal-tab-content" id="journalTabJournal" data-tab="journal">
+                    <div class="modal-body journal-body">
+                        <!-- Day-level notes -->
+                        <div class="journal-section">
+                            <div class="journal-section-label"><i class="fas fa-sticky-note"></i> Day Notes</div>
+                            <textarea class="journal-day-notes" id="journalDayNotes"
+                                placeholder="How was your trading day? Write your thoughts, observations, emotions..."></textarea>
+                        </div>
+                        <!-- Per-trade journal entries (injected by JS) -->
+                        <div class="journal-trades-entries" id="journalTradesEntries">
+                            <!-- Per-trade note + screenshot blocks will go here -->
+                        </div>
+                        <!-- Save indicator -->
+                        <div class="journal-save-bar">
+                            <span class="journal-save-status" id="journalSaveStatus">
+                                <i class="fas fa-cloud"></i> All changes saved
+                            </span>
+                            <button class="btn btn-primary btn-sm" id="journalSaveBtn">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -655,10 +692,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/csvParser.js?v=3"></script>
-    <script src="js/tradeCalculator.js?v=3"></script>
-    <script src="js/ui.js?v=3"></script>
-    <script src="js/main.js?v=3"></script>
+    <script src="js/csvParser.js?v=4"></script>
+    <script src="js/tradeCalculator.js?v=4"></script>
+    <script src="js/ui.js?v=4"></script>
+    <script src="js/main.js?v=4"></script>
 
     <script>
         // Initialize the app
