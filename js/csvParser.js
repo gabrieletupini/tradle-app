@@ -1,12 +1,28 @@
 /**
- * CSV Parser for TradingView Data
- * Handles parsing and validation of TradingView paper trading CSV files
+ * CSV Parser for Trading Data
+ * Handles parsing of TradingView and Interactive Brokers CSV files
  */
 class CSVParser {
     constructor() {
         this.supportedFormats = {
             tradingview: 'TradingView Paper Trading',
+            ibkr: 'Interactive Brokers',
             custom: 'Custom Format'
+        };
+
+        // IBKR multiplier → TradingView symbol mapping
+        this.IBKR_MULTIPLIER_MAP = {
+            50: 'ES1!',    // E-mini S&P 500
+            5: 'MES1!',   // Micro E-mini S&P 500 (or MYM, M2K — disambiguated by price range)
+            20: 'NQ1!',    // E-mini Nasdaq-100
+            2: 'MNQ1!',   // Micro E-mini Nasdaq-100
+            1000: 'CL1!',    // Crude Oil (or ZB, ZN — disambiguated by price)
+            100: 'GC1!',    // Gold (or MCL — disambiguated by price)
+            10: 'MGC1!',   // Micro Gold (or NG)
+            5000: 'SI1!',    // Silver
+            10000: 'NG1!',    // Natural Gas
+            125000: '6E1!',    // Euro FX
+            12500000: '6J1!',  // Japanese Yen
         };
     }
 
@@ -19,12 +35,23 @@ class CSVParser {
         console.log(`📏 Content length: ${csvContent.length}`);
 
         try {
+            // Auto-detect format if set to 'auto'
+            if (format === 'auto') {
+                format = this.detectFormat(csvContent);
+                console.log(`🔍 Auto-detected format: ${format}`);
+            }
+
             switch (format) {
                 case 'tradingview':
                     console.log('📊 Calling parseTradingViewCSV...');
                     const result = this.parseTradingViewCSV(csvContent);
                     console.log('✅ parseTradingViewCSV completed successfully');
                     return result;
+                case 'ibkr':
+                    console.log('🏦 Calling parseIBKRCSV...');
+                    const ibkrResult = this.parseIBKRCSV(csvContent);
+                    console.log('✅ parseIBKRCSV completed successfully');
+                    return ibkrResult;
                 case 'custom':
                     throw new Error('Custom format not yet supported');
                 default:
@@ -431,6 +458,173 @@ class CSVParser {
                 reject(new Error(`FileReader synchronous error: ${syncError.message}`));
             }
         });
+    }
+
+    /**
+     * Auto-detect CSV format from headers
+     */
+    detectFormat(csvContent) {
+        const firstLine = csvContent.split('\n')[0].toLowerCase();
+        if (firstLine.includes('net amount') && !firstLine.includes('status')) {
+            return 'ibkr';
+        }
+        if (firstLine.includes('placing time') || firstLine.includes('order id') || firstLine.includes('status')) {
+            return 'tradingview';
+        }
+        return 'tradingview'; // default fallback
+    }
+
+    /**
+     * Validate Interactive Brokers CSV headers
+     */
+    validateIBKRHeaders(headers) {
+        const required = ['symbol', 'side', 'qty', 'fill price', 'time'];
+        const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+        return required.every(req => normalizedHeaders.some(h => h.includes(req)));
+    }
+
+    /**
+     * Resolve IBKR symbol from contract name, price, and multiplier
+     * IBKR uses "Mar20 '26" style names; we detect the product from the multiplier
+     */
+    resolveIBKRSymbol(ibkrSymbol, fillPrice, qty, netAmount) {
+        if (!fillPrice || !qty || !netAmount) return ibkrSymbol;
+
+        const multiplier = Math.round(Math.abs(netAmount) / (fillPrice * qty));
+        console.log(`🔍 IBKR symbol resolve: ${ibkrSymbol} | price=${fillPrice} qty=${qty} net=${netAmount} → multiplier=${multiplier}`);
+
+        // Disambiguate multiplier=5 by price range
+        if (multiplier === 5) {
+            if (fillPrice > 3000) return 'MES1!';        // Micro S&P (price ~5000-7000)
+            if (fillPrice > 100) return 'MYM1!';         // Micro Dow (price ~300-450)
+            return 'M2K1!';                              // Micro Russell (price ~20-30)
+        }
+
+        // Disambiguate multiplier=1000 by price range
+        if (multiplier === 1000) {
+            if (fillPrice > 500) return 'ZB1!';           // 30-Year T-Bond
+            if (fillPrice > 100) return 'ZN1!';           // 10-Year T-Note
+            return 'CL1!';                                // Crude Oil (price ~50-100)
+        }
+
+        // Disambiguate multiplier=100 by price
+        if (multiplier === 100) {
+            if (fillPrice > 500) return 'GC1!';           // Gold (price ~1800-2500)
+            return 'MCL1!';                               // Micro Crude Oil
+        }
+
+        return this.IBKR_MULTIPLIER_MAP[multiplier] || ibkrSymbol;
+    }
+
+    /**
+     * Parse Interactive Brokers CSV format
+     * Headers: Symbol, Side, Qty, Fill Price, Time, Net Amount, Commission
+     */
+    parseIBKRCSV(csvContent) {
+        console.log('🏦 parseIBKRCSV: Starting Interactive Brokers CSV parsing...');
+
+        const lines = csvContent.split('\n');
+        console.log(`📄 Total lines: ${lines.length}`);
+
+        if (lines.length === 0) {
+            throw new Error('CSV file is empty');
+        }
+
+        const headers = lines[0].split(',');
+        console.log('📋 Headers:', headers);
+
+        if (!this.validateIBKRHeaders(headers)) {
+            console.error('❌ IBKR header validation failed');
+            throw new Error('Invalid Interactive Brokers CSV format. Expected columns: Symbol, Side, Qty, Fill Price, Time, Net Amount, Commission');
+        }
+
+        // Build header index map
+        const headerMap = {};
+        headers.forEach((header, index) => {
+            headerMap[header.toLowerCase().trim()] = index;
+        });
+
+        const getValue = (name) => {
+            const idx = headerMap[name.toLowerCase()];
+            return idx !== undefined ? (lines[0] ? undefined : undefined) : undefined; // placeholder
+        };
+
+        const orders = [];
+        let validOrderCount = 0;
+        let errorCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line || line.split(',').every(cell => !cell.trim())) continue;
+
+            try {
+                const values = this.parseCSVLine(line);
+                if (values.length < 5) continue;
+
+                const getVal = (name) => {
+                    const idx = headerMap[name.toLowerCase()];
+                    return idx !== undefined && values[idx] !== undefined ? values[idx].trim() : '';
+                };
+
+                const ibkrSymbol = getVal('symbol');
+                const side = getVal('side');
+                const qty = this.parseInteger(getVal('qty'));
+                const fillPrice = this.parsePrice(getVal('fill price'));
+                const time = this.parseDateTime(getVal('time'));
+                const netAmount = parseFloat((getVal('net amount') || '0').replace(/[^\d.-]/g, '')) || 0;
+                const commission = parseFloat((getVal('commission') || '0').replace(/[^\d.-]/g, '')) || 0;
+
+                if (!ibkrSymbol || !side || !fillPrice || !qty || !time) {
+                    errorCount++;
+                    if (errorCount <= 3) console.warn(`⚠️ Invalid IBKR order on line ${i + 1}`);
+                    continue;
+                }
+
+                // Resolve to TradingView-style symbol using multiplier detection
+                const resolvedSymbol = this.resolveIBKRSymbol(ibkrSymbol, fillPrice, qty, netAmount);
+
+                orders.push({
+                    symbol: resolvedSymbol,
+                    side: side,
+                    type: 'Market',  // IBKR trade history = already filled, treat as Market
+                    qty: qty,
+                    limitPrice: null,
+                    stopPrice: null,
+                    fillPrice: fillPrice,
+                    status: 'Filled', // All IBKR trade history entries are filled
+                    commission: commission,
+                    placingTime: time,
+                    closingTime: time,
+                    orderId: `ibkr_${time.getTime()}_${i}`,
+                    levelId: '',
+                    leverage: '',
+                    margin: netAmount ? `${netAmount} USD` : ''
+                });
+                validOrderCount++;
+
+                if (validOrderCount <= 5) {
+                    console.log(`📝 IBKR order ${validOrderCount}: ${side} ${qty}x ${resolvedSymbol} @ ${fillPrice} (${ibkrSymbol})`);
+                }
+            } catch (error) {
+                errorCount++;
+                if (errorCount <= 3) console.warn(`❌ Error parsing IBKR line ${i + 1}:`, error.message);
+            }
+        }
+
+        console.log(`✅ IBKR parsing completed. Valid: ${validOrderCount}, Errors: ${errorCount}`);
+
+        // Sort chronologically (IBKR may export newest first)
+        const chronologicalOrders = orders.sort((a, b) => a.placingTime - b.placingTime);
+
+        return {
+            orders: chronologicalOrders,
+            stats: {
+                totalLines: lines.length - 1,
+                validOrders: validOrderCount,
+                errors: errorCount,
+                format: 'ibkr'
+            }
+        };
     }
 
     /**

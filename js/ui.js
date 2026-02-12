@@ -36,13 +36,23 @@ class UIController {
         // Two-step import elements
         this.formatSelectionContainer = document.getElementById('formatSelectionContainer');
         this.tradingviewUploadContainer = document.getElementById('tradingviewUploadContainer');
+        this.ibkrUploadContainer = document.getElementById('ibkrUploadContainer');
         this.selectTradingViewBtn = document.getElementById('selectTradingViewBtn');
+        this.selectIBKRBtn = document.getElementById('selectIBKRBtn');
         this.backToFormatSelection = document.getElementById('backToFormatSelection');
+        this.backToFormatSelectionIBKR = document.getElementById('backToFormatSelectionIBKR');
 
-        // Upload elements
+        // Upload elements (TradingView)
         this.uploadArea = document.getElementById('uploadArea');
         this.csvFileInput = document.getElementById('csvFileInput');
         this.uploadStatus = document.getElementById('uploadStatus');
+
+        // Upload elements (IBKR)
+        this.ibkrUploadArea = document.getElementById('ibkrUploadArea');
+        this.ibkrCsvFileInput = document.getElementById('ibkrCsvFileInput');
+
+        // Track which format is currently selected
+        this.selectedUploadFormat = 'tradingview';
         this.formatOptions = document.querySelectorAll('input[name="csvFormat"]');
 
         // Dashboard elements
@@ -98,8 +108,14 @@ class UIController {
         if (this.selectTradingViewBtn) {
             this.selectTradingViewBtn.addEventListener('click', this.showTradingViewUpload.bind(this));
         }
+        if (this.selectIBKRBtn) {
+            this.selectIBKRBtn.addEventListener('click', this.showIBKRUpload.bind(this));
+        }
         if (this.backToFormatSelection) {
             this.backToFormatSelection.addEventListener('click', this.showFormatSelection.bind(this));
+        }
+        if (this.backToFormatSelectionIBKR) {
+            this.backToFormatSelectionIBKR.addEventListener('click', this.showFormatSelection.bind(this));
         }
 
         // File upload events
@@ -125,6 +141,31 @@ class UIController {
 
         if (this.csvFileInput) {
             this.csvFileInput.addEventListener('change', this.handleFileSelect.bind(this));
+        }
+
+        // IBKR upload events
+        if (this.ibkrUploadArea) {
+            this.ibkrUploadArea.addEventListener('click', () => {
+                if (this.ibkrCsvFileInput) this.ibkrCsvFileInput.click();
+            });
+            this.ibkrUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                this.ibkrUploadArea.classList.add('dragover');
+            });
+            this.ibkrUploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                this.ibkrUploadArea.classList.remove('dragover');
+            });
+            this.ibkrUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                this.ibkrUploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) this.processFile(e.dataTransfer.files[0]);
+            });
+        }
+        if (this.ibkrCsvFileInput) {
+            this.ibkrCsvFileInput.addEventListener('change', (e) => {
+                if (e.target.files[0]) this.processFile(e.target.files[0]);
+            });
         }
 
         // Format selection (legacy - keeping for backward compatibility)
@@ -230,28 +271,8 @@ class UIController {
             this.showLoading();
             this.showUploadStatus('Processing your file...');
 
-            // Get selected format - with defensive programming for new two-step interface
-            let selectedFormat = 'tradingview'; // Default to TradingView format
-
-            // Try to get format from radio buttons (legacy support)
-            const formatRadio = document.querySelector('input[name="csvFormat"]:checked');
-            if (formatRadio && formatRadio.value) {
-                selectedFormat = formatRadio.value;
-            } else {
-                // In new two-step interface, format is determined by which step user is on
-                // If tradingviewUploadContainer is visible, user selected TradingView format
-                const tradingViewContainer = document.getElementById('tradingviewUploadContainer');
-                if (tradingViewContainer && tradingViewContainer.style.display !== 'none') {
-                    selectedFormat = 'tradingview';
-                } else {
-                    // Fallback: check if we're in the format selection step
-                    const formatContainer = document.getElementById('formatSelectionContainer');
-                    if (formatContainer && formatContainer.style.display !== 'none') {
-                        // User is still in format selection, shouldn't be uploading yet
-                        throw new Error('Please select a format first by clicking "TradingView Format"');
-                    }
-                }
-            }
+            // Use the format selected from the two-step UI
+            const selectedFormat = this.selectedUploadFormat || 'tradingview';
 
             console.log(`📁 Processing file with format: ${selectedFormat}`);
 
@@ -2902,9 +2923,11 @@ class UIController {
      */
     showTradingViewUpload() {
         console.log('🎯 Switching to TradingView upload interface');
+        this.selectedUploadFormat = 'tradingview';
 
         if (this.formatSelectionContainer && this.tradingviewUploadContainer) {
             this.formatSelectionContainer.style.display = 'none';
+            if (this.ibkrUploadContainer) this.ibkrUploadContainer.style.display = 'none';
             this.tradingviewUploadContainer.style.display = 'block';
 
             // Add animation class for smooth transition
@@ -2917,8 +2940,32 @@ class UIController {
                 this.tradingviewUploadContainer.style.transform = 'translateX(0)';
             });
 
-            // Show success message
             this.showToast('TradingView format selected. Upload your CSV file below.', 'success');
+        }
+    }
+
+    /**
+     * Show Interactive Brokers upload interface (Step 2b)
+     */
+    showIBKRUpload() {
+        console.log('🏦 Switching to Interactive Brokers upload interface');
+        this.selectedUploadFormat = 'ibkr';
+
+        if (this.formatSelectionContainer && this.ibkrUploadContainer) {
+            this.formatSelectionContainer.style.display = 'none';
+            if (this.tradingviewUploadContainer) this.tradingviewUploadContainer.style.display = 'none';
+            this.ibkrUploadContainer.style.display = 'block';
+
+            this.ibkrUploadContainer.style.opacity = '0';
+            this.ibkrUploadContainer.style.transform = 'translateX(20px)';
+
+            requestAnimationFrame(() => {
+                this.ibkrUploadContainer.style.transition = 'all 0.3s ease-out';
+                this.ibkrUploadContainer.style.opacity = '1';
+                this.ibkrUploadContainer.style.transform = 'translateX(0)';
+            });
+
+            this.showToast('Interactive Brokers format selected. Upload your CSV file below.', 'success');
         }
     }
 
@@ -2928,8 +2975,9 @@ class UIController {
     showFormatSelection() {
         console.log('🔙 Returning to format selection');
 
-        if (this.formatSelectionContainer && this.tradingviewUploadContainer) {
-            this.tradingviewUploadContainer.style.display = 'none';
+        if (this.formatSelectionContainer) {
+            if (this.tradingviewUploadContainer) this.tradingviewUploadContainer.style.display = 'none';
+            if (this.ibkrUploadContainer) this.ibkrUploadContainer.style.display = 'none';
             this.formatSelectionContainer.style.display = 'block';
 
             // Add animation class for smooth transition
@@ -2945,10 +2993,9 @@ class UIController {
             // Reset any upload status
             this.hideUploadStatus();
 
-            // Clear file input
-            if (this.csvFileInput) {
-                this.csvFileInput.value = '';
-            }
+            // Clear file inputs
+            if (this.csvFileInput) this.csvFileInput.value = '';
+            if (this.ibkrCsvFileInput) this.ibkrCsvFileInput.value = '';
         }
     }
 }

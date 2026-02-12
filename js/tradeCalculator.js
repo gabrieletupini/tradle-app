@@ -106,6 +106,7 @@ class TradeCalculator {
      * Match buy/sell order pairs using order type intelligence.
      * Entry orders (Limit/Stop) are paired with the next opposite-side exit order (Market).
      * Orphan exit orders (e.g. a Market buy that exits a short from previous data) are skipped.
+     * For IBKR-style data (all Market type, varying quantities), uses look-ahead matching.
      */
     matchTrades(orders) {
         const trades = [];
@@ -115,36 +116,65 @@ class TradeCalculator {
 
         console.log(`Matching ${validOrders.length} valid orders chronologically`);
 
+        // Track which orders have been used
+        const used = new Set();
+
         let i = 0;
-        while (i < validOrders.length - 1) {
+        while (i < validOrders.length) {
+            if (used.has(i)) { i++; continue; }
+
             const current = validOrders[i];
-            const next = validOrders[i + 1];
 
-            if (!this.isValidTradePair(current, next)) {
-                i++;
-                continue;
+            // Look ahead for the best matching opposite-side order
+            let bestMatch = -1;
+            let bestMatchPriority = -1;
+
+            for (let j = i + 1; j < validOrders.length; j++) {
+                if (used.has(j)) continue;
+                const candidate = validOrders[j];
+
+                if (!this.isValidTradePair(current, candidate)) continue;
+
+                const currentIsEntry = this.isEntryOrderType(current.type);
+                const candidateIsEntry = this.isEntryOrderType(candidate.type);
+
+                // Priority: Entry→Exit (3), same-type fallback (2), Exit→Entry (1)
+                let priority = 2;
+                if (currentIsEntry && !candidateIsEntry) priority = 3;
+                else if (!currentIsEntry && candidateIsEntry) priority = 1;
+
+                if (priority > bestMatchPriority) {
+                    bestMatch = j;
+                    bestMatchPriority = priority;
+                    // If we found a perfect Entry→Exit pair, use it immediately
+                    if (priority === 3) break;
+                }
+                // For same-type fallback, take the nearest match (first found)
+                if (priority === 2 && bestMatchPriority === 2) break;
             }
 
-            const currentIsEntry = this.isEntryOrderType(current.type);
-            const nextIsEntry = this.isEntryOrderType(next.type);
+            if (bestMatch !== -1) {
+                const match = validOrders[bestMatch];
 
-            if (currentIsEntry && !nextIsEntry) {
-                // Normal: Entry (Limit/Stop) followed by Exit (Market) → valid pair
-                const trade = this.createTradeObject(current, next);
+                // Skip if current is an orphan exit and match is an entry (wrong direction)
+                if (bestMatchPriority === 1) {
+                    console.log(`⏭️ Skipping orphan exit: ${current.side} ${current.type} ${current.fillPrice}`);
+                    i++;
+                    continue;
+                }
+
+                const trade = this.createTradeObject(current, match);
                 trades.push(trade);
-                console.log(`✅ Trade ${trades.length}: ${current.side} ${current.type} ${current.fillPrice} -> ${next.side} ${next.type} ${next.fillPrice} [${trade.side}]`);
-                i += 2;
-            } else if (!currentIsEntry && nextIsEntry) {
-                // Current is an exit (Market) of a previous trade → skip it
-                console.log(`⏭️ Skipping orphan exit: ${current.side} ${current.type} ${current.fillPrice}`);
-                i++;
+                used.add(i);
+                used.add(bestMatch);
+
+                const label = bestMatchPriority === 3 ? '' : ' (fallback)';
+                console.log(`✅ Trade ${trades.length}${label}: ${current.side} ${current.type} ${current.fillPrice} -> ${match.side} ${match.type} ${match.fillPrice} [${trade.side}]`);
             } else {
-                // Both same type (e.g. both Market) → fallback to chronological pairing
-                const trade = this.createTradeObject(current, next);
-                trades.push(trade);
-                console.log(`✅ Trade ${trades.length} (fallback): ${current.side} ${current.type} ${current.fillPrice} -> ${next.side} ${next.type} ${next.fillPrice} [${trade.side}]`);
-                i += 2;
+                console.log(`⏭️ No match found for: ${current.side} ${current.type} ${current.fillPrice} qty=${current.qty}`);
             }
+
+            i++;
         }
 
         console.log(`Matched ${trades.length} complete trades`);

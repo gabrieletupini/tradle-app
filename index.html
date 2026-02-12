@@ -422,27 +422,27 @@
                                 </button>
                             </div>
 
-                            <div class="format-card coming-soon-card">
+                            <div class="format-card ibkr-card" id="ibkrFormatCard">
                                 <div class="card-icon">
                                     <i class="fas fa-building"></i>
                                 </div>
                                 <div class="card-content">
-                                    <h3>Other Brokers</h3>
-                                    <p>Additional broker formats and integrations</p>
+                                    <h3>Interactive Brokers</h3>
+                                    <p>Upload trade history exports from IBKR paper or live accounts</p>
                                     <div class="card-features">
                                         <span class="feature-item">
-                                            <i class="fas fa-hourglass-half"></i>
-                                            Interactive Brokers
+                                            <i class="fas fa-check"></i>
+                                            Trade history support
                                         </span>
                                         <span class="feature-item">
-                                            <i class="fas fa-hourglass-half"></i>
-                                            TD Ameritrade
+                                            <i class="fas fa-check"></i>
+                                            Auto symbol detection
                                         </span>
                                     </div>
                                 </div>
-                                <button class="select-format-btn" disabled>
-                                    <i class="fas fa-clock"></i>
-                                    Coming Soon
+                                <button class="select-format-btn" id="selectIBKRBtn">
+                                    <i class="fas fa-arrow-right"></i>
+                                    Select IBKR
                                 </button>
                             </div>
 
@@ -542,6 +542,79 @@
                             <div class="status-content">
                                 <i class="fas fa-spinner fa-spin"></i>
                                 <span class="status-text">Processing your TradingView file...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2b: IBKR Upload Interface -->
+                    <div class="tradingview-upload-container" id="ibkrUploadContainer" style="display: none;">
+                        <div class="upload-header">
+                            <button class="back-btn" id="backToFormatSelectionIBKR">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>Back to Format Selection</span>
+                            </button>
+                            <h2>Upload Interactive Brokers Trade History CSV</h2>
+                            <p>Upload your trade history export from Interactive Brokers</p>
+                        </div>
+
+                        <div class="format-info-card">
+                            <div class="format-info-header">
+                                <i class="fas fa-info-circle"></i>
+                                <h3>Expected CSV Format</h3>
+                            </div>
+                            <div class="format-info-content">
+                                <p><strong>Required columns:</strong></p>
+                                <div class="column-list">
+                                    <span class="column-item">Symbol</span>
+                                    <span class="column-item">Side</span>
+                                    <span class="column-item">Qty</span>
+                                    <span class="column-item">Fill Price</span>
+                                    <span class="column-item">Time</span>
+                                    <span class="column-item">Net Amount</span>
+                                </div>
+                                <div class="export-instructions">
+                                    <p><strong>How to export from IBKR:</strong></p>
+                                    <ol>
+                                        <li>Go to your Interactive Brokers account</li>
+                                        <li>Navigate to "Performance & Reports" → "Trade History"</li>
+                                        <li>Select your date range and click "Export" as CSV</li>
+                                        <li>Upload the downloaded file here</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- IBKR Upload Area -->
+                        <div class="upload-area tradingview-upload-area" id="ibkrUploadArea">
+                            <div class="upload-content">
+                                <div class="upload-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <h3>Drag & drop your IBKR CSV file here</h3>
+                                <p>or <span class="upload-link">browse to choose a file</span></p>
+                                <input type="file" id="ibkrCsvFileInput" accept=".csv" hidden>
+                                <div class="file-requirements">
+                                    <div class="requirement-item">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Interactive Brokers CSV format</span>
+                                    </div>
+                                    <div class="requirement-item">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Maximum file size: 10MB</span>
+                                    </div>
+                                    <div class="requirement-item">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Futures contract symbols auto-detected</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Status -->
+                        <div class="upload-status" id="ibkrUploadStatus" style="display: none;">
+                            <div class="status-content">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span class="status-text">Processing your IBKR file...</span>
                             </div>
                         </div>
                     </div>
