@@ -1900,7 +1900,7 @@ class UIController {
         dashboardBody.innerHTML = '';
 
         if (!trades || trades.length === 0) {
-            dashboardBody.innerHTML = '<tr class="no-data"><td colspan="6">No trades available</td></tr>';
+            dashboardBody.innerHTML = '<tr class="no-data"><td colspan="7">No trades available</td></tr>';
             return;
         }
 
@@ -1963,7 +1963,7 @@ class UIController {
         });
 
         if (todayTrades.length === 0) {
-            dashboardBody.innerHTML = '<tr class="no-data"><td colspan="6">No trades today</td></tr>';
+            dashboardBody.innerHTML = '<tr class="no-data"><td colspan="7">No trades today</td></tr>';
             return;
         }
 
@@ -1989,8 +1989,12 @@ class UIController {
                     }
                 } catch (e) { /* ignore */ }
 
+                const broker = trade.broker || '';
+                const brokerClass = broker === 'IBKR' ? 'broker-ibkr' : 'broker-tv';
+
                 row.innerHTML = `
                     <td>${timeStr}</td>
+                    <td><span class="broker-badge ${brokerClass}">${broker}</span></td>
                     <td>${trade.contract || trade.symbol || '-'}</td>
                     <td><span class="side side-${(trade.side?.toLowerCase() || 'long')}">${trade.side || 'LONG'}</span></td>
                     <td>${this.formatCurrency(entryPrice)} → ${this.formatCurrency(exitPrice)}</td>
@@ -2047,7 +2051,7 @@ class UIController {
             console.log('❌ No trades provided to trade history performance table');
             tableBody.innerHTML = `
                 <tr class="no-data">
-                    <td colspan="11">
+                    <td colspan="12">
                         <div class="no-data-message">
                             <i class="fas fa-chart-line"></i>
                             <h4>No Trade History</h4>
@@ -2140,7 +2144,7 @@ class UIController {
         if (pageTrades.length === 0) {
             tableBody.innerHTML = `
                 <tr class="no-data">
-                    <td colspan="11">
+                    <td colspan="12">
                         <div class="no-data-message">
                             <i class="fas fa-search"></i>
                             <h4>No Matching Trades</h4>
@@ -2165,8 +2169,12 @@ class UIController {
                 const returnClass = trade.netProfit >= 0 ? 'positive' : 'negative';
                 const sideClass = trade.side?.toLowerCase() || 'long';
 
+                const broker = trade.broker || '';
+                const brokerClass = broker === 'IBKR' ? 'broker-ibkr' : 'broker-tv';
+
                 row.innerHTML = `
                     <td>${this.formatDate(trade.date || trade.exitTime)}</td>
+                    <td><span class="broker-badge ${brokerClass}">${broker}</span></td>
                     <td>${trade.contract || trade.symbol || '-'}</td>
                     <td><span class="side side-${sideClass}">${trade.side || 'LONG'}</span></td>
                     <td>${this.formatCurrency(trade.entry || trade.entryPrice || 0)}</td>
@@ -2597,7 +2605,7 @@ class UIController {
         if (pageTrades.length === 0) {
             this.tradesTableBody.innerHTML = `
                 <tr class="no-data-row">
-                    <td colspan="11">
+                    <td colspan="12">
                         <div class="no-data-message">
                             <i class="fas fa-search"></i>
                             <h4>No Matching Trades</h4>
@@ -2659,9 +2667,13 @@ class UIController {
 
         const symbol = trade.contract || trade.symbol || '-';
 
+        const broker = trade.broker || '';
+        const brokerClass = broker === 'IBKR' ? 'broker-ibkr' : 'broker-tv';
+
         return `
             <tr data-trade-id="${trade.id || ''}" class="trade-row">
                 <td>${dateStr}</td>
+                <td><span class="broker-badge ${brokerClass}">${broker}</span></td>
                 <td>${symbol}</td>
                 <td>${side}</td>
                 <td>${qty}</td>

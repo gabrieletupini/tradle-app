@@ -40,8 +40,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/style.css?v=8">
-    <link rel="stylesheet" href="css/responsive.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link rel="stylesheet" href="css/responsive.css?v=9">
 </head>
 
 <body>
@@ -295,6 +295,7 @@
                                         <thead>
                                             <tr>
                                                 <th>Time</th>
+                                                <th>Broker</th>
                                                 <th>Symbol</th>
                                                 <th>Side</th>
                                                 <th>Entry → Exit</th>
@@ -304,7 +305,7 @@
                                         </thead>
                                         <tbody id="dashboardTradesBody">
                                             <tr class="no-data">
-                                                <td colspan="6">No trades loaded yet</td>
+                                                <td colspan="7">No trades loaded yet</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -341,6 +342,7 @@
                                 <thead>
                                     <tr>
                                         <th data-sort="date">Date <i class="fas fa-sort"></i></th>
+                                        <th data-sort="broker">Broker</th>
                                         <th data-sort="symbol">Symbol</th>
                                         <th data-sort="side">Side</th>
                                         <th data-sort="quantity">Qty</th>
@@ -356,7 +358,7 @@
                                 <tbody id="tradesTableBody">
                                     <!-- Trading data will appear here after upload -->
                                     <tr class="no-data-row">
-                                        <td colspan="11">
+                                        <td colspan="12">
                                             <div class="no-data-message">
                                                 <i class="fas fa-sync-alt"></i>
                                                 <h4>Loading Default Data...</h4>
@@ -823,12 +825,12 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/imageStore.js?v=8"></script>
-    <script src="js/firebaseSync.js?v=8"></script>
-    <script src="js/csvParser.js?v=8"></script>
-    <script src="js/tradeCalculator.js?v=8"></script>
-    <script src="js/ui.js?v=8"></script>
-    <script src="js/main.js?v=8"></script>
+    <script src="js/imageStore.js?v=9"></script>
+    <script src="js/firebaseSync.js?v=9"></script>
+    <script src="js/csvParser.js?v=9"></script>
+    <script src="js/tradeCalculator.js?v=9"></script>
+    <script src="js/ui.js?v=9"></script>
+    <script src="js/main.js?v=9"></script>
 
     <script>
         // Initialize the app

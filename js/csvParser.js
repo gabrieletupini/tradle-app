@@ -263,7 +263,8 @@ class CSVParser {
             orderId: getValue(['order id', 'orderid'], 11) || '',
             levelId: getValue(['level id', 'levelid'], 12) || '',
             leverage: getValue(['leverage'], 13) || '',
-            margin: getValue(['margin'], 14) || ''
+            margin: getValue(['margin'], 14) || '',
+            broker: 'TradingView'
         };
     }
 
@@ -598,7 +599,8 @@ class CSVParser {
                     orderId: `ibkr_${time.getTime()}_${i}`,
                     levelId: '',
                     leverage: '',
-                    margin: netAmount ? `${netAmount} USD` : ''
+                    margin: netAmount ? `${netAmount} USD` : '',
+                    broker: 'IBKR'
                 });
                 validOrderCount++;
 

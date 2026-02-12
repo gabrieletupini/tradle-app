@@ -1857,6 +1857,27 @@ body {
     color: var(--danger-color);
 }
 
+/* Broker Badges */
+.broker-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.broker-badge.broker-tv {
+    background: #2962ff20;
+    color: #2962ff;
+}
+
+.broker-badge.broker-ibkr {
+    background: #d4000020;
+    color: #d40000;
+}
+
 /* Profit/Loss Colors */
 .profit-positive {
     color: var(--success-color);

@@ -225,7 +225,8 @@ class TradeCalculator {
             contract: entryOrder.symbol,
             side: side,
             margin: parseMargin(entryOrder.margin || exitOrder.margin),
-            leverage: entryOrder.leverage || exitOrder.leverage || ''
+            leverage: entryOrder.leverage || exitOrder.leverage || '',
+            broker: entryOrder.broker || exitOrder.broker || ''
         };
     }
 
@@ -292,7 +293,8 @@ class TradeCalculator {
             entryOrderId: trade.entryOrder.orderId,
             exitOrderId: trade.exitOrder.orderId,
             margin: trade.margin || 0,
-            leverage: trade.leverage || ''
+            leverage: trade.leverage || '',
+            broker: trade.broker || trade.entryOrder?.broker || ''
         };
 
         return trinjoTrade;
