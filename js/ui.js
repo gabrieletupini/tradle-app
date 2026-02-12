@@ -1261,8 +1261,8 @@ class UIController {
 
         this._saveJournal(dayKey, journal);
 
-        // Sync to GitHub (debounced — won't fire on every keystroke)
-        if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
+        // Sync to Firebase (debounced — won't fire on every keystroke)
+        if (typeof FirebaseSync !== 'undefined') FirebaseSync.scheduleJournalSync();
     }
 
     // ===== Screenshot Add (File Picker) — saves to IndexedDB =====
@@ -1279,7 +1279,10 @@ class UIController {
                     const imgId = await ImageStore.save(dayKey, tradeId, dataUrl);
                     this._addScreenshotToGrid(tradeId, dataUrl, imgId);
                     this._setJournalSaveStatus(true);
-                    if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
+                    if (typeof FirebaseSync !== 'undefined') {
+                        FirebaseSync.pushScreenshot({ id: imgId, dayKey, tradeId, dataUrl });
+                        FirebaseSync.scheduleJournalSync();
+                    }
                 });
             });
         };
@@ -1311,7 +1314,10 @@ class UIController {
                     const imgId = await ImageStore.save(dayKey, targetTradeId, dataUrl);
                     this._addScreenshotToGrid(targetTradeId, dataUrl, imgId);
                     this._setJournalSaveStatus(true);
-                    if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
+                    if (typeof FirebaseSync !== 'undefined') {
+                        FirebaseSync.pushScreenshot({ id: imgId, dayKey, tradeId: targetTradeId, dataUrl });
+                        FirebaseSync.scheduleJournalSync();
+                    }
                 });
             }
         }
@@ -1325,7 +1331,10 @@ class UIController {
         }
         if (thumbEl) thumbEl.remove();
         this._setJournalSaveStatus(true);
-        if (typeof GitHubSync !== 'undefined') GitHubSync.scheduleJournalSync();
+        if (typeof FirebaseSync !== 'undefined') {
+            if (imgId) FirebaseSync.removeScreenshot(imgId);
+            FirebaseSync.scheduleJournalSync();
+        }
     }
 
     // ===== Add Screenshot to DOM Grid =====

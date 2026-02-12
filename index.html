@@ -40,8 +40,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/style.css?v=7">
-    <link rel="stylesheet" href="css/responsive.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/responsive.css?v=8">
 </head>
 
 <body>
@@ -669,29 +669,18 @@
                         <hr
                             style="border: none; border-top: 1px solid var(--border-light); margin: var(--spacing-6) 0;">
 
-                        <!-- GitHub Cross-Device Sync -->
+                        <!-- Cross-Device Sync Status -->
                         <div class="backup-section" style="margin-bottom: var(--spacing-8);">
                             <h3 style="margin-bottom: var(--spacing-4); color: var(--text-primary);">
                                 <i class="fas fa-sync-alt" style="color: var(--primary-color);"></i> Cross-Device Sync
                             </h3>
                             <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
-                                Upload a CSV on any device and it automatically updates everywhere.
-                                Enter your GitHub token once — uploads will sync to the repo.
+                                Your journal notes, screenshots, and uploaded CSVs sync automatically across all devices
+                                via Firebase.
+                                No setup needed — just use the app.
                             </p>
-                            <div style="display: flex; gap: var(--spacing-3); align-items: flex-end; flex-wrap: wrap;">
-                                <div style="flex: 1; min-width: 250px;">
-                                    <label
-                                        style="display: block; color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 4px;">GitHub
-                                        Personal Access Token</label>
-                                    <input type="password" id="githubPatInput" placeholder="ghp_..."
-                                        style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9rem;">
-                                </div>
-                                <button class="btn btn-primary" id="githubPatSaveBtn" style="white-space: nowrap;">
-                                    <i class="fas fa-key"></i> Save Token
-                                </button>
-                            </div>
-                            <div id="githubSyncStatus"
-                                style="margin-top: var(--spacing-3); font-size: 0.85rem; color: var(--text-secondary);">
+                            <div id="firebaseSyncStatus" style="font-size: 0.85rem; color: var(--success-color);">
+                                <i class="fas fa-check-circle"></i> Sync active — data is shared across all your devices
                             </div>
                         </div>
 
@@ -834,12 +823,12 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/imageStore.js?v=7"></script>
-    <script src="js/githubSync.js?v=7"></script>
-    <script src="js/csvParser.js?v=7"></script>
-    <script src="js/tradeCalculator.js?v=7"></script>
-    <script src="js/ui.js?v=7"></script>
-    <script src="js/main.js?v=7"></script>
+    <script src="js/imageStore.js?v=8"></script>
+    <script src="js/firebaseSync.js?v=8"></script>
+    <script src="js/csvParser.js?v=8"></script>
+    <script src="js/tradeCalculator.js?v=8"></script>
+    <script src="js/ui.js?v=8"></script>
+    <script src="js/main.js?v=8"></script>
 
     <script>
         // Initialize the app
