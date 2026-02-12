@@ -63,6 +63,7 @@ class CSVParser {
         const orders = [];
         let validOrderCount = 0;
         let errorCount = 0;
+        let skippedCancelledCount = 0;
         let processedLines = 0;
 
         console.log(`🔄 Processing ${lines.length - 1} data lines...`);
@@ -89,6 +90,12 @@ class CSVParser {
                 if (values.length >= headers.length && values[0] && values[0].trim()) {
 
                     const order = this.createOrderObject(values, headers);
+
+                    // Silently skip cancelled orders — they are expected in TradingView exports
+                    if (order.status && order.status.toLowerCase() === 'cancelled') {
+                        skippedCancelledCount++;
+                        continue;
+                    }
 
                     if (this.validateOrder(order)) {
                         orders.push(order);
@@ -118,7 +125,7 @@ class CSVParser {
             }
         }
 
-        console.log(`✅ Line processing completed. Valid: ${validOrderCount}, Errors: ${errorCount}`);
+        console.log(`✅ Line processing completed. Valid: ${validOrderCount}, Cancelled (skipped): ${skippedCancelledCount}, Errors: ${errorCount}`);
 
         // Reverse to get chronological order (TradingView exports newest first)
         console.log('🔄 Reversing order array for chronological sorting...');
@@ -130,6 +137,7 @@ class CSVParser {
             stats: {
                 totalLines: lines.length - 1,
                 validOrders: validOrderCount,
+                skippedCancelled: skippedCancelledCount,
                 errors: errorCount,
                 format: 'tradingview'
             }
@@ -257,29 +265,45 @@ class CSVParser {
     }
 
     /**
-     * Parse datetime from TradingView format (e.g., "2/10/26 15:56")
+     * Parse datetime from TradingView format
+     * Supports: "2/10/26 15:56", "2/10/26 15:56:03", "2026-02-12 16:33:22"
      */
     parseDateTime(dateTimeStr) {
         if (!dateTimeStr || dateTimeStr.trim() === '') return null;
 
         try {
-            // Handle format like "2/10/26 15:56" or "2/10/26 15:56:03" (with optional seconds)
-            const match = dateTimeStr.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(?::(\d+))?/);
-            if (match) {
-                const [, month, day, year, hour, minute, second] = match;
-
-                // Convert 2-digit year to 4-digit (assuming 2000s)
+            // Format 1: "M/D/YY HH:MM" or "M/D/YY HH:MM:SS"
+            const slashMatch = dateTimeStr.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(?::(\d+))?/);
+            if (slashMatch) {
+                const [, month, day, year, hour, minute, second] = slashMatch;
                 const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
-
                 return new Date(
                     fullYear,
-                    parseInt(month) - 1, // Month is 0-indexed
+                    parseInt(month) - 1,
                     parseInt(day),
                     parseInt(hour),
                     parseInt(minute),
                     parseInt(second || 0)
                 );
             }
+
+            // Format 2: "YYYY-MM-DD HH:MM:SS" (ISO-like)
+            const isoMatch = dateTimeStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d+):(\d+)(?::(\d+))?/);
+            if (isoMatch) {
+                const [, year, month, day, hour, minute, second] = isoMatch;
+                return new Date(
+                    parseInt(year),
+                    parseInt(month) - 1,
+                    parseInt(day),
+                    parseInt(hour),
+                    parseInt(minute),
+                    parseInt(second || 0)
+                );
+            }
+
+            // Format 3: Try native Date.parse as last resort
+            const parsed = new Date(dateTimeStr);
+            if (!isNaN(parsed.getTime())) return parsed;
 
             return null;
         } catch (error) {
