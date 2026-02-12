@@ -178,6 +178,26 @@ class UIController {
         // Load sample data event will be bound by main app
         this.exportBtn.addEventListener('click', this.exportTrades.bind(this));
 
+        // Backup / Restore buttons
+        const exportBackupBtn = document.getElementById('exportBackupBtn');
+        const importBackupBtn = document.getElementById('importBackupBtn');
+        const backupFileInput = document.getElementById('backupFileInput');
+
+        if (exportBackupBtn) {
+            exportBackupBtn.addEventListener('click', () => {
+                if (window.tradleApp) window.tradleApp.exportFullBackup();
+            });
+        }
+        if (importBackupBtn && backupFileInput) {
+            importBackupBtn.addEventListener('click', () => backupFileInput.click());
+            backupFileInput.addEventListener('change', (e) => {
+                if (e.target.files[0] && window.tradleApp) {
+                    window.tradleApp.importFullBackup(e.target.files[0]);
+                    backupFileInput.value = '';
+                }
+            });
+        }
+
         // Search and filter
         this.tradeSearch.addEventListener('input', this.handleSearch.bind(this));
         this.statusFilter.addEventListener('change', this.handleFilter.bind(this));

@@ -991,6 +991,159 @@ class TradleApp {
 
         this.uiController.showToast(userMessage, 'error');
     }
+
+    // ===== Full Backup: Export everything (trades + journal + screenshots) =====
+
+    async exportFullBackup() {
+        try {
+            this.uiController.showToast('Preparing full backup...', 'info');
+
+            // 1. Trade database
+            const tradeDB = localStorage.getItem('tradle_trade_database');
+
+            // 2. All journal entries (tradle_journal_*)
+            const journals = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('tradle_journal_')) {
+                    journals[key] = localStorage.getItem(key);
+                }
+            }
+
+            // 3. Daily goal
+            const dailyGoal = localStorage.getItem('tradle_daily_goal');
+
+            // 4. All screenshots from IndexedDB
+            const screenshots = [];
+            try {
+                const db = await ImageStore._getDB();
+                const tx = db.transaction('screenshots', 'readonly');
+                const store = tx.objectStore('screenshots');
+                const allRecords = await new Promise((resolve, reject) => {
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+                screenshots.push(...allRecords);
+                console.log(`📸 Exported ${screenshots.length} screenshots from IndexedDB`);
+            } catch (e) {
+                console.warn('⚠️ Could not export screenshots:', e);
+            }
+
+            // Build backup object
+            const backup = {
+                version: '2.0',
+                exportedAt: new Date().toISOString(),
+                browser: navigator.userAgent,
+                data: {
+                    tradeDatabase: tradeDB,
+                    journals: journals,
+                    dailyGoal: dailyGoal,
+                    screenshots: screenshots
+                }
+            };
+
+            // Download as JSON
+            const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const date = new Date().toISOString().slice(0, 10);
+            a.download = `tradle-backup-${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            const sizeMB = (blob.size / 1024 / 1024).toFixed(1);
+            this.uiController.showToast(`Backup downloaded (${sizeMB} MB) — ${screenshots.length} screenshots included`, 'success');
+
+        } catch (error) {
+            console.error('❌ Backup export failed:', error);
+            this.uiController.showToast(`Backup failed: ${error.message}`, 'error');
+        }
+    }
+
+    // ===== Full Restore: Import everything from backup file =====
+
+    async importFullBackup(file) {
+        try {
+            this.uiController.showLoading();
+            this.uiController.showToast('Restoring backup...', 'info');
+
+            const text = await file.text();
+            const backup = JSON.parse(text);
+
+            if (!backup.version || !backup.data) {
+                throw new Error('Invalid backup file format');
+            }
+
+            console.log(`📦 Restoring backup from ${backup.exportedAt} (v${backup.version})`);
+
+            // 1. Restore trade database
+            if (backup.data.tradeDatabase) {
+                localStorage.setItem('tradle_trade_database', backup.data.tradeDatabase);
+                console.log('✅ Trade database restored');
+            }
+
+            // 2. Restore journal entries
+            if (backup.data.journals) {
+                for (const [key, value] of Object.entries(backup.data.journals)) {
+                    localStorage.setItem(key, value);
+                }
+                console.log(`✅ Restored ${Object.keys(backup.data.journals).length} journal entries`);
+            }
+
+            // 3. Restore daily goal
+            if (backup.data.dailyGoal) {
+                localStorage.setItem('tradle_daily_goal', backup.data.dailyGoal);
+            }
+
+            // 4. Restore screenshots to IndexedDB
+            if (backup.data.screenshots && backup.data.screenshots.length > 0) {
+                try {
+                    await ImageStore.init();
+                    const db = await ImageStore._getDB();
+                    const tx = db.transaction('screenshots', 'readwrite');
+                    const store = tx.objectStore('screenshots');
+
+                    for (const screenshot of backup.data.screenshots) {
+                        await new Promise((resolve, reject) => {
+                            const req = store.put(screenshot); // put = upsert
+                            req.onsuccess = () => resolve();
+                            req.onerror = () => reject(req.error);
+                        });
+                    }
+
+                    console.log(`✅ Restored ${backup.data.screenshots.length} screenshots to IndexedDB`);
+                } catch (e) {
+                    console.warn('⚠️ Could not restore screenshots:', e);
+                }
+            }
+
+            // 5. Reload the app to pick up restored data
+            this.loadTradeDatabase();
+
+            if (this.tradeDatabase.trades.length > 0) {
+                const summary = this.tradeCalculator.generateSummary(this.tradeDatabase.trades);
+                await this.uiController.updateDashboard(this.tradeDatabase.trades, summary);
+            }
+
+            this.uiController.hideLoading();
+
+            const screenshotCount = backup.data.screenshots ? backup.data.screenshots.length : 0;
+            const journalCount = backup.data.journals ? Object.keys(backup.data.journals).length : 0;
+            this.uiController.showToast(
+                `Backup restored: ${this.tradeDatabase.trades.length} trades, ${journalCount} journal entries, ${screenshotCount} screenshots`,
+                'success'
+            );
+
+        } catch (error) {
+            this.uiController.hideLoading();
+            console.error('❌ Backup restore failed:', error);
+            this.uiController.showToast(`Restore failed: ${error.message}`, 'error');
+        }
+    }
 }
 
 /**
