@@ -872,7 +872,7 @@ class UIController {
             const duration = trade.duration || '-';
             const rawSymbol = trade.contract || trade.symbol || 'Unknown';
             const tvSymbol = rawSymbol.includes(':') ? rawSymbol : `CME_MINI:${rawSymbol}`;
-            const tradeId = trade.orderId || trade.orderID || `trade_${i}`;
+            const tradeId = this._stableTradeId(trade, i);
 
             // Format entry/exit times
             let entryTimeStr = '-', exitTimeStr = '-';
@@ -995,6 +995,27 @@ class UIController {
 
     // ===== Journal Data Persistence =====
 
+    /**
+     * Get a stable, deterministic trade ID for journal storage.
+     * Uses entry+exit order IDs (unique per trade and survives reloads).
+     * Falls back to array index only as last resort.
+     */
+    _stableTradeId(trade, index) {
+        // Best: deterministic from order IDs
+        if (trade.entryOrderId && trade.exitOrderId) {
+            return `${trade.entryOrderId}_${trade.exitOrderId}`;
+        }
+        // Next: from nested order objects
+        if (trade.entryOrder?.orderId && trade.exitOrder?.orderId) {
+            return `${trade.entryOrder.orderId}_${trade.exitOrder.orderId}`;
+        }
+        // Next: from explicit orderId on the trade
+        if (trade.orderId) return trade.orderId;
+        if (trade.orderID) return trade.orderID;
+        // Last resort: array index (fragile but backwards compatible)
+        return `trade_${index}`;
+    }
+
     _getJournalKey(dayKey) {
         return `tradle_journal_${dayKey}`;
     }
@@ -1038,18 +1059,50 @@ class UIController {
         const dayNotesEl = document.getElementById('journalDayNotes');
         if (dayNotesEl) {
             dayNotesEl.value = journal.dayNotes || '';
-            dayNotesEl.oninput = () => this._setJournalSaveStatus(false, 'Unsaved changes');
+            // oninput handler is set in _bindJournalEvents (debounced auto-save)
         }
 
         // Per-trade entries
         const container = document.getElementById('journalTradesEntries');
         if (!container) return;
 
+        // Migrate old journal keys (trade_0, trade_1 ...) → stable order-ID-based keys
+        if (journal.trades) {
+            let migrated = false;
+            trades.forEach((trade, i) => {
+                const stableId = this._stableTradeId(trade, i);
+                const oldId = `trade_${i}`;
+                if (stableId !== oldId && journal.trades[oldId] && !journal.trades[stableId]) {
+                    journal.trades[stableId] = journal.trades[oldId];
+                    delete journal.trades[oldId];
+                    migrated = true;
+                }
+            });
+            if (migrated) this._saveJournal(dayKey, journal);
+        }
+
         // Pre-load all screenshots for this day from IndexedDB in one batch
         let dayScreenshots = [];
         try {
             dayScreenshots = await ImageStore.getForDay(dayKey);
         } catch (e) { console.warn('Failed to load screenshots from IndexedDB:', e); }
+
+        // Migrate screenshot tradeIds in IndexedDB (trade_0 → stable ID)
+        for (let i = 0; i < trades.length; i++) {
+            const stableId = this._stableTradeId(trades[i], i);
+            const oldId = `trade_${i}`;
+            if (stableId !== oldId) {
+                const oldScreenshots = dayScreenshots.filter(s => s.tradeId === oldId);
+                for (const s of oldScreenshots) {
+                    try {
+                        // Re-save with stable tradeId
+                        await ImageStore.save(dayKey, stableId, s.dataUrl);
+                        await ImageStore.remove(s.id);
+                        s.tradeId = stableId; // update in-memory too
+                    } catch (e) { console.warn('Screenshot migration error:', e); }
+                }
+            }
+        }
 
         // Index screenshots by tradeId for fast lookup
         const screenshotsByTrade = {};
@@ -1060,7 +1113,7 @@ class UIController {
 
         let entriesHtml = '';
         trades.forEach((trade, i) => {
-            const tradeId = trade.orderId || trade.orderID || `trade_${i}`;
+            const tradeId = this._stableTradeId(trade, i);
             const pnl = trade.netProfit ?? trade.returnValue ?? trade.return ?? 0;
             const status = trade.status || (pnl >= 0 ? 'WIN' : 'LOSE');
             const statusClass = status === 'WIN' ? 'win' : 'lose';
@@ -1135,9 +1188,25 @@ class UIController {
             saveBtn.onclick = () => this._saveCurrentJournal(dayKey, trades);
         }
 
-        // Per-trade note change → mark unsaved
+        // Debounced auto-save helper (saves 1s after last keystroke)
+        let autoSaveTimer = null;
+        const debouncedSave = () => {
+            this._setJournalSaveStatus(false, 'Unsaved changes');
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                this._saveCurrentJournal(dayKey, trades);
+            }, 1000);
+        };
+
+        // Day notes → debounced auto-save
+        const dayNotesEl = document.getElementById('journalDayNotes');
+        if (dayNotesEl) {
+            dayNotesEl.oninput = debouncedSave;
+        }
+
+        // Per-trade note change → debounced auto-save
         document.querySelectorAll('.journal-trade-notes').forEach(ta => {
-            ta.oninput = () => this._setJournalSaveStatus(false, 'Unsaved changes');
+            ta.oninput = debouncedSave;
         });
 
         // Screenshot add buttons
@@ -1181,7 +1250,7 @@ class UIController {
         };
 
         trades.forEach((trade, i) => {
-            const tradeId = trade.orderId || trade.orderID || `trade_${i}`;
+            const tradeId = this._stableTradeId(trade, i);
             const noteEl = document.querySelector(`.journal-trade-notes[data-trade-id="${tradeId}"]`);
 
             journal.trades[tradeId] = {

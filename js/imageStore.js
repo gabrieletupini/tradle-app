@@ -58,6 +58,13 @@ class ImageStore {
     }
 
     /**
+     * Get the database handle (alias for init — used by backup/calendar code).
+     */
+    static async _getDB() {
+        return this.init();
+    }
+
+    /**
      * Generate a unique ID for a screenshot.
      */
     static _generateId() {

@@ -750,9 +750,13 @@ class TradleApp {
                 }
             } else {
                 // New trade - add to database
+                // Keep existing deterministic id if present, otherwise generate one
+                const tradeId = (trade.id && trade.id.startsWith('trade_') && !trade.id.includes('_undefined'))
+                    ? trade.id
+                    : this.generateTradeId();
                 const enhancedTrade = {
                     ...trade,
-                    id: this.generateTradeId(),
+                    id: tradeId,
                     entryOrderId: tradeOrderIds[0] || null,
                     exitOrderId: tradeOrderIds[1] || null,
                     allOrderIds: tradeOrderIds
