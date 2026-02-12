@@ -77,61 +77,73 @@ class TradleApp {
     }
 
     /**
-     * Auto-load the default sample CSV on startup.
+     * Auto-load the default sample CSVs on startup.
      * The committed sample data is always available (even on GitHub Pages)
      * and gets merged with any existing localStorage data.
      * Upload a new CSV to overwrite/update.
      */
     async autoLoadDefaultCSV() {
-        const csvPath = 'data/sample-data/sample-tradingview-data.csv';
-        try {
-            console.log(`📂 Auto-loading default CSV: ${csvPath}`);
-            const response = await fetch(csvPath);
-            if (!response.ok) {
-                console.log(`📂 Default CSV not found (${response.status}), skipping auto-load`);
-                return false;
+        const sampleFiles = [
+            { path: 'data/sample-data/sample-tradingview-data.csv', format: 'tradingview' },
+            { path: 'data/sample-data/sample-ibkr-data.csv', format: 'ibkr' }
+        ];
+
+        let anyLoaded = false;
+
+        for (const sample of sampleFiles) {
+            try {
+                console.log(`📂 Auto-loading default CSV: ${sample.path} (${sample.format})`);
+                const response = await fetch(sample.path);
+                if (!response.ok) {
+                    console.log(`📂 Default CSV not found (${response.status}), skipping: ${sample.path}`);
+                    continue;
+                }
+
+                const csvContent = await response.text();
+                if (!csvContent || csvContent.trim().length < 20) {
+                    console.log(`📂 Default CSV is empty, skipping: ${sample.path}`);
+                    continue;
+                }
+
+                console.log(`📂 Default CSV loaded: ${csvContent.length} chars (${sample.format})`);
+
+                // Parse using the appropriate parser
+                const parseResult = await this.csvParser.parseCSV(csvContent, sample.format);
+                if (parseResult.orders.length === 0) {
+                    console.warn(`⚠️ Default CSV contained no valid orders: ${sample.path}`);
+                    continue;
+                }
+
+                // Calculate trades
+                const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
+                if (tradeResult.trades.length === 0) {
+                    console.warn(`⚠️ Default CSV contained no matchable trades: ${sample.path}`);
+                    continue;
+                }
+
+                // Merge with database (handles deduplication)
+                this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+                anyLoaded = true;
+
+                console.log(`✅ Auto-loaded ${tradeResult.trades.length} trades from ${sample.path}`);
+
+            } catch (error) {
+                console.log(`📂 Could not auto-load ${sample.path}: ${error.message}`);
             }
+        }
 
-            const csvContent = await response.text();
-            if (!csvContent || csvContent.trim().length < 20) {
-                console.log('📂 Default CSV is empty, skipping');
-                return false;
-            }
-
-            console.log(`📂 Default CSV loaded: ${csvContent.length} chars`);
-
-            // Parse
-            const parseResult = this.csvParser.parseTradingViewCSV(csvContent);
-            if (parseResult.orders.length === 0) {
-                console.warn('⚠️ Default CSV contained no valid orders');
-                return false;
-            }
-
-            // Calculate trades
-            const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
-            if (tradeResult.trades.length === 0) {
-                console.warn('⚠️ Default CSV contained no matchable trades');
-                return false;
-            }
-
-            // Merge with database (handles deduplication)
-            this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
-
-            // Persist
+        if (anyLoaded) {
+            // Persist after all samples are loaded
             this.saveTradeDatabase();
 
             // Update dashboard
             const summary = this.tradeCalculator.generateSummary(this.tradeDatabase.trades);
             this.uiController.updateDashboard(this.tradeDatabase.trades, summary);
-            this.uiController.showToast(`Auto-loaded ${this.tradeDatabase.trades.length} trades from default CSV`, 'success');
-
-            console.log(`✅ Auto-loaded ${this.tradeDatabase.trades.length} trades from ${csvPath}`);
-            return true;
-
-        } catch (error) {
-            console.log(`📂 Could not auto-load default CSV: ${error.message}`);
-            return false;
+            this.uiController.showToast(`Auto-loaded ${this.tradeDatabase.trades.length} trades from default data`, 'success');
         }
+
+        console.log(`📂 Auto-load complete: ${this.tradeDatabase.trades.length} total trades`);
+        return anyLoaded;
     }
 
     /**
