@@ -2786,340 +2786,340 @@ body {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+/* ===== Notion-Themed Journal Body ===== */
+.journal-body {
+    padding: var(--spacing-5) var(--spacing-6) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    overflow-y: auto;
+    max-height: 65vh;
+}
+
+.journal-section {
+    margin-bottom: var(--spacing-5);
+}
+
+.journal-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.journal-section-label i {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Day-level textarea */
+.journal-day-notes {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-3);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.journal-day-notes:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.journal-day-notes::placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* ===== Per-Trade Journal Entry ===== */
+.journal-trade-entry {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-4);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.journal-trade-entry:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.journal-trade-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    user-select: none;
+}
+
+.journal-trade-entry-header:hover {
+    background: var(--bg-tertiary);
+}
+
+.journal-trade-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.journal-trade-title .trade-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.journal-trade-title .trade-badge.win {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.journal-trade-title .trade-badge.lose {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.journal-trade-pnl {
+    font-weight: 700;
+    font-size: var(--font-size-sm);
+}
+
+.journal-trade-pnl.positive {
+    color: var(--success-color);
+}
+
+.journal-trade-pnl.negative {
+    color: var(--danger-color);
+}
+
+.journal-trade-entry-body {
+    padding: var(--spacing-3) var(--spacing-4);
+}
+
+.journal-trade-entry-body.collapsed {
+    display: none;
+}
+
+/* Per-trade notes */
+.journal-trade-notes {
+    width: 100%;
+    min-height: 60px;
+    resize: vertical;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    font-family: inherit;
+    color: var(--text-primary);
+    line-height: 1.5;
+    transition: border-color 0.2s ease;
+    margin-bottom: var(--spacing-3);
+}
+
+.journal-trade-notes:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.journal-trade-notes::placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+    opacity: 0.5;
+    font-size: var(--font-size-xs);
+}
+
+/* Screenshots area */
+.journal-screenshots-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.journal-screenshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-2);
+}
+
+.journal-screenshot-thumb {
+    position: relative;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.journal-screenshot-thumb:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.journal-screenshot-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.journal-screenshot-thumb .screenshot-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.journal-screenshot-thumb:hover .screenshot-remove {
+    display: flex;
+}
+
+.journal-screenshot-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--border-light);
+    border-radius: var(--radius-sm);
+    aspect-ratio: 16 / 10;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--font-size-lg);
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 75px;
+}
+
+.journal-screenshot-add:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.journal-screenshot-add .add-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Save bar */
+.journal-save-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3) 0 0;
+    border-top: 1px solid var(--border-light);
+    margin-top: var(--spacing-3);
+}
+
+.journal-save-status {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.journal-save-status.saved {
+    color: var(--success-color);
+}
+
+.journal-save-status.unsaved {
+    color: #f59e0b;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: var(--font-size-xs);
+}
+
+/* ===== Screenshot Lightbox ===== */
+.screenshot-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    animation: fadeIn 0.2s ease;
+}
+
+.screenshot-lightbox img {
+    max-width: 92vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
     }
 
-    /* ===== Notion-Themed Journal Body ===== */
-    .journal-body {
-        padding: var(--spacing-5) var(--spacing-6) !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
-        overflow-y: auto;
-        max-height: 65vh;
+    to {
+        opacity: 1;
     }
+}
 
-    .journal-section {
-        margin-bottom: var(--spacing-5);
-    }
+/* Calendar day journal indicator */
+.calendar-day .journal-indicator {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 9px;
+    color: var(--primary-color);
+    opacity: 0.7;
+}
 
-    .journal-section-label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
-        margin-bottom: var(--spacing-2);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .journal-section-label i {
-        font-size: 12px;
-        opacity: 0.7;
-    }
-
-    /* Day-level textarea */
-    .journal-day-notes {
-        width: 100%;
-        min-height: 90px;
-        resize: vertical;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-light);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-3);
-        font-size: var(--font-size-sm);
-        font-family: inherit;
-        color: var(--text-primary);
-        line-height: 1.6;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .journal-day-notes:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-    }
-
-    .journal-day-notes::placeholder {
-        color: var(--text-muted);
-        font-style: italic;
-        opacity: 0.6;
-    }
-
-    /* ===== Per-Trade Journal Entry ===== */
-    .journal-trade-entry {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--spacing-4);
-        overflow: hidden;
-        transition: box-shadow 0.2s ease;
-    }
-
-    .journal-trade-entry:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    }
-
-    .journal-trade-entry-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: var(--spacing-3) var(--spacing-4);
-        background: var(--bg-secondary);
-        border-bottom: 1px solid var(--border-light);
-        cursor: pointer;
-        user-select: none;
-    }
-
-    .journal-trade-entry-header:hover {
-        background: var(--bg-tertiary);
-    }
-
-    .journal-trade-title {
-        font-size: var(--font-size-sm);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .journal-trade-title .trade-badge {
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 3px;
-        text-transform: uppercase;
-    }
-
-    .journal-trade-title .trade-badge.win {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .journal-trade-title .trade-badge.lose {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .journal-trade-pnl {
-        font-weight: 700;
-        font-size: var(--font-size-sm);
-    }
-
-    .journal-trade-pnl.positive {
-        color: var(--success-color);
-    }
-
-    .journal-trade-pnl.negative {
-        color: var(--danger-color);
-    }
-
-    .journal-trade-entry-body {
-        padding: var(--spacing-3) var(--spacing-4);
-    }
-
-    .journal-trade-entry-body.collapsed {
-        display: none;
-    }
-
-    /* Per-trade notes */
-    .journal-trade-notes {
-        width: 100%;
-        min-height: 60px;
-        resize: vertical;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-light);
-        border-radius: var(--radius-sm);
-        padding: var(--spacing-2) var(--spacing-3);
-        font-size: var(--font-size-xs);
-        font-family: inherit;
-        color: var(--text-primary);
-        line-height: 1.5;
-        transition: border-color 0.2s ease;
-        margin-bottom: var(--spacing-3);
-    }
-
-    .journal-trade-notes:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
-    }
-
-    .journal-trade-notes::placeholder {
-        color: var(--text-muted);
-        font-style: italic;
-        opacity: 0.5;
-        font-size: var(--font-size-xs);
-    }
-
-    /* Screenshots area */
-    .journal-screenshots-label {
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-muted);
-        margin-bottom: var(--spacing-2);
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .journal-screenshot-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: var(--spacing-2);
-        margin-bottom: var(--spacing-2);
-    }
-
-    .journal-screenshot-thumb {
-        position: relative;
-        border-radius: var(--radius-sm);
-        overflow: hidden;
-        aspect-ratio: 16 / 10;
-        border: 1px solid var(--border-light);
-        cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .journal-screenshot-thumb:hover {
-        transform: scale(1.03);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    .journal-screenshot-thumb img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .journal-screenshot-thumb .screenshot-remove {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        width: 20px;
-        height: 20px;
-        background: rgba(0, 0, 0, 0.6);
-        color: #fff;
-        border: none;
-        border-radius: 50%;
-        font-size: 10px;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-    }
-
-    .journal-screenshot-thumb:hover .screenshot-remove {
-        display: flex;
-    }
-
-    .journal-screenshot-add {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px dashed var(--border-light);
-        border-radius: var(--radius-sm);
-        aspect-ratio: 16 / 10;
-        cursor: pointer;
-        color: var(--text-muted);
-        font-size: var(--font-size-lg);
-        transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-        flex-direction: column;
-        gap: 4px;
-        min-height: 75px;
-    }
-
-    .journal-screenshot-add:hover {
-        border-color: var(--primary-color);
-        color: var(--primary-color);
-        background: rgba(99, 102, 241, 0.04);
-    }
-
-    .journal-screenshot-add .add-label {
-        font-size: 9px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-
-    /* Save bar */
-    .journal-save-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--spacing-3) 0 0;
-        border-top: 1px solid var(--border-light);
-        margin-top: var(--spacing-3);
-    }
-
-    .journal-save-status {
-        font-size: var(--font-size-xs);
-        color: var(--text-muted);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .journal-save-status.saved {
-        color: var(--success-color);
-    }
-
-    .journal-save-status.unsaved {
-        color: #f59e0b;
-    }
-
-    .btn-sm {
-        padding: 6px 14px;
-        font-size: var(--font-size-xs);
-    }
-
-    /* ===== Screenshot Lightbox ===== */
-    .screenshot-lightbox {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 2000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: zoom-out;
-        animation: fadeIn 0.2s ease;
-    }
-
-    .screenshot-lightbox img {
-        max-width: 92vw;
-        max-height: 90vh;
-        object-fit: contain;
-        border-radius: var(--radius-md);
-        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
-    /* Calendar day journal indicator */
-    .calendar-day .journal-indicator {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        font-size: 9px;
-        color: var(--primary-color);
-        opacity: 0.7;
-    }
-
-    /* Responsive journal */
-    @media (max-width: 768px) {
+/* Responsive journal */
+@media (max-width: 768px) {
     .journal-modal .journal-modal-content {
         max-width: 100vw;
         width: 100vw;
@@ -3130,44 +3130,44 @@ body {
     .journal-screenshot-grid {
         grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
 
-    /* Responsive Design for Format Cards */
-    @media (max-width: 768px) {
-        .format-cards {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-4);
+        /* Responsive Design for Format Cards */
+        @media (max-width: 768px) {
+            .format-cards {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-4);
+            }
+
+            .format-card {
+                padding: var(--spacing-6);
+            }
+
+            .card-icon i {
+                font-size: 2.5rem;
+                width: 60px;
+                height: 60px;
+            }
+
+            .format-selection-header h2 {
+                font-size: var(--font-size-2xl);
+            }
+
+            .upload-header h2 {
+                font-size: var(--font-size-2xl);
+            }
         }
 
-        .format-card {
-            padding: var(--spacing-6);
-        }
+        @media (max-width: 480px) {
 
-        .card-icon i {
-            font-size: 2.5rem;
-            width: 60px;
-            height: 60px;
-        }
+            .format-selection-container,
+            .tradingview-upload-container {
+                padding: var(--spacing-4) var(--spacing-3);
+            }
 
-        .format-selection-header h2 {
-            font-size: var(--font-size-2xl);
-        }
+            .card-features {
+                align-items: center;
+            }
 
-        .upload-header h2 {
-            font-size: var(--font-size-2xl);
+            .column-list {
+                justify-content: center;
+            }
         }
-    }
-
-    @media (max-width: 480px) {
-
-        .format-selection-container,
-        .tradingview-upload-container {
-            padding: var(--spacing-4) var(--spacing-3);
-        }
-
-        .card-features {
-            align-items: center;
-        }
-
-        .column-list {
-            justify-content: center;
-        }
-    }

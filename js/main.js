@@ -42,6 +42,14 @@ class TradleApp {
         console.log('🚀 Tradle Trading Journal initialized');
         this.isInitialized = true;
 
+        // Initialize IndexedDB image store + migrate any old localStorage screenshots
+        try {
+            await ImageStore.init();
+            await ImageStore.migrateFromLocalStorage();
+        } catch (e) {
+            console.warn('⚠️ ImageStore init error (screenshots may not work):', e);
+        }
+
         // Load persistent trade database
         this.loadTradeDatabase();
 
