@@ -143,6 +143,10 @@ class TradleApp {
                     continue;
                 }
 
+                // Tag broker on each trade based on the CSV format
+                const brokerLabel = sample.format === 'ibkr' ? 'IBKR' : 'TradingView';
+                tradeResult.trades.forEach(t => t.broker = brokerLabel);
+
                 // Merge with database (handles deduplication)
                 this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
                 anyLoaded = true;
@@ -290,6 +294,10 @@ class TradleApp {
                 console.error('❌ No valid trades could be matched');
                 throw new Error('No valid trades could be matched from the orders');
             }
+
+            // Tag broker on each trade based on the upload format
+            const brokerLabel = format === 'ibkr' ? 'IBKR' : 'TradingView';
+            tradeResult.trades.forEach(t => t.broker = brokerLabel);
 
             console.log('✅ Trade calculation completed');
             console.log(`🔢 Calculated ${tradeResult.trades.length} trades`);
@@ -677,6 +685,15 @@ class TradleApp {
 
                     console.log(`📂 ✅ LOADED ${this.tradeDatabase.trades.length} trades from database`);
                     console.log(`🔐 ✅ TRACKING ${this.tradeDatabase.orderIds.size} unique Order IDs`);
+
+                    // Backfill broker field for trades saved before the broker column was added
+                    this.tradeDatabase.trades.forEach(trade => {
+                        if (!trade.broker) {
+                            const oid = trade.entryOrderId || trade.exitOrderId || trade.id || '';
+                            trade.broker = oid.startsWith('ibkr_') ? 'IBKR' : 'TradingView';
+                        }
+                    });
+
                     console.log('🔍 DEBUG: Sample trade:', this.tradeDatabase.trades[0]);
                     return true;
                 } else {
