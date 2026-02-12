@@ -63,6 +63,10 @@ class TradleApp {
                 if (screenshotResult.success && screenshotResult.merged > 0) {
                     console.log(`📥 Merged ${screenshotResult.merged} screenshots from Firebase`);
                 }
+
+                // Push local data to Firebase (ensures existing cached data syncs up)
+                FirebaseSync.pushJournal();
+                FirebaseSync.pushAllScreenshots();
             }
         } catch (e) {
             console.warn('⚠️ Firebase sync error:', e);

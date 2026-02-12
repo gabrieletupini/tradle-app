@@ -982,6 +982,8 @@ class UIController {
             this._journalAutoSave();
             this._journalAutoSave = null;
         }
+        // Flush journal to Firebase immediately (don't rely on debounce timer)
+        if (typeof FirebaseSync !== 'undefined') FirebaseSync.pushJournal();
         const modal = document.getElementById('journalModal');
         if (modal) modal.classList.remove('active');
         if (this._journalEscHandler) {
@@ -1182,10 +1184,13 @@ class UIController {
     // ===== Journal Event Binding =====
 
     _bindJournalEvents(dayKey, trades) {
-        // Save button
+        // Save button → immediate Firebase push (no debounce)
         const saveBtn = document.getElementById('journalSaveBtn');
         if (saveBtn) {
-            saveBtn.onclick = () => this._saveCurrentJournal(dayKey, trades);
+            saveBtn.onclick = () => {
+                this._saveCurrentJournal(dayKey, trades);
+                if (typeof FirebaseSync !== 'undefined') FirebaseSync.pushJournal();
+            };
         }
 
         // Debounced auto-save helper (saves 1s after last keystroke)

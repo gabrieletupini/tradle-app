@@ -192,6 +192,44 @@ class FirebaseSync {
         }
     }
 
+    /**
+     * Push ALL existing screenshots from IndexedDB to Firebase (one-time migration).
+     */
+    static async pushAllScreenshots() {
+        try {
+            await ImageStore.init();
+            const db = await ImageStore._getDB();
+            const allScreenshots = await new Promise((resolve, reject) => {
+                const tx = db.transaction('screenshots', 'readonly');
+                const req = tx.objectStore('screenshots').getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+
+            if (allScreenshots.length === 0) {
+                console.log('📤 FirebaseSync: No local screenshots to push');
+                return { success: true, pushed: 0 };
+            }
+
+            let pushed = 0;
+            for (const screenshot of allScreenshots) {
+                if (!screenshot.id || !screenshot.dataUrl) continue;
+                const resp = await fetch(`${this.DB_URL}/screenshots/${screenshot.id}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(screenshot)
+                });
+                if (resp.ok) pushed++;
+            }
+
+            console.log(`📤 FirebaseSync: Pushed ${pushed}/${allScreenshots.length} screenshots to Firebase`);
+            return { success: true, pushed };
+        } catch (e) {
+            console.warn('⚠️ FirebaseSync: Bulk screenshot push failed:', e.message);
+            return { success: false, message: e.message };
+        }
+    }
+
     // ===== CSV Sync =====
 
     /**
