@@ -167,6 +167,9 @@ class TradleApp {
                 this.handleClearDatabase();
             });
         }
+
+        // Bind GitHub Sync settings
+        this.bindGitHubSyncUI();
     }
 
     /**
@@ -189,6 +192,54 @@ class TradleApp {
         } else {
             console.log('❌ User cancelled database clear');
         }
+    }
+
+    /**
+     * Bind GitHub Sync settings UI (PAT input, save button, status)
+     */
+    bindGitHubSyncUI() {
+        const patInput = document.getElementById('githubPatInput');
+        const saveBtn = document.getElementById('githubPatSaveBtn');
+        const statusEl = document.getElementById('githubSyncStatus');
+
+        if (!patInput || !saveBtn) return;
+
+        // Show current state
+        const currentPat = GitHubSync.getPAT();
+        if (currentPat) {
+            patInput.value = currentPat;
+            patInput.type = 'password';
+            if (statusEl) statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success-color);"></i> Token saved — uploads will sync across all devices';
+        }
+
+        saveBtn.addEventListener('click', async () => {
+            const pat = patInput.value.trim();
+            if (!pat) {
+                GitHubSync.setPAT('');
+                if (statusEl) statusEl.innerHTML = '<i class="fas fa-times-circle" style="color: var(--danger-color);"></i> Token removed — sync disabled';
+                this.uiController.showToast('GitHub sync disabled', 'info');
+                return;
+            }
+
+            // Validate
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+            if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing connection...';
+
+            const result = await GitHubSync.validatePAT(pat);
+
+            if (result.valid) {
+                GitHubSync.setPAT(pat);
+                if (statusEl) statusEl.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${result.message} — uploads will sync automatically`;
+                this.uiController.showToast('GitHub sync enabled! Uploads will now sync to all devices.', 'success');
+            } else {
+                if (statusEl) statusEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i> ${result.message}`;
+                this.uiController.showToast(`Token invalid: ${result.message}`, 'error');
+            }
+
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-key"></i> Save Token';
+        });
     }
 
     /**
@@ -364,7 +415,22 @@ class TradleApp {
             // Step 8: Data already saved in Step 6b (before UI update)
             console.log('💾 Step 8: Data already persisted to localStorage ✅');
 
-            // Step 9: No page reload needed — dashboard is already showing the new data
+            // Step 9: Sync uploaded CSV to GitHub (cross-device persistence)
+            if (typeof GitHubSync !== 'undefined' && GitHubSync.isConfigured()) {
+                console.log('🔄 Step 9: Syncing CSV to GitHub...');
+                // Run in background — don't block the UI
+                GitHubSync.pushCSV(csvContent, format).then(result => {
+                    if (result.success) {
+                        this.uiController.showToast(result.message, 'success');
+                    } else {
+                        console.warn('⚠️ GitHub sync skipped:', result.message);
+                    }
+                });
+            } else {
+                console.log('💡 Step 9: GitHub sync not configured — data is local only');
+            }
+
+            // Step 10: No page reload needed — dashboard is already showing the new data
 
             const totalTime = Date.now() - startTime;
             console.log(`🎉 Processing completed successfully in ${totalTime}ms`);
