@@ -1552,7 +1552,6 @@ class UIController {
             }
         });
     }
-    }
 
     /**
      * Get PnL evolution data for chart
