@@ -1519,17 +1519,7 @@ class UIController {
                 },
                 scales: {
                     x: {
-                        display: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)',
-                            drawBorder: false
-                        },
-                        ticks: {
-                            color: '#6b7280',
-                            font: {
-                                size: 11
-                            }
-                        }
+                        display: false
                     },
                     y: {
                         display: true,
