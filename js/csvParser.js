@@ -599,7 +599,7 @@ class CSVParser {
                     orderId: `ibkr_${time.getTime()}_${i}`,
                     levelId: '',
                     leverage: '',
-                    margin: netAmount ? `${netAmount} USD` : '',
+                    margin: '',
                     broker: 'IBKR'
                 });
                 validOrderCount++;
