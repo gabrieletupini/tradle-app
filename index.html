@@ -40,8 +40,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/style.css?v=12">
-    <link rel="stylesheet" href="css/responsive.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/responsive.css?v=13">
 </head>
 
 <body>
@@ -225,9 +225,13 @@
                         <div class="chart-header">
                             <h3>PnL Evolution</h3>
                             <div class="chart-controls">
-                                <button class="btn-chart active" data-period="all">All Time</button>
-                                <button class="btn-chart" data-period="30d">30D</button>
-                                <button class="btn-chart" data-period="7d">7D</button>
+                                <button class="btn-chart active" data-period="all" id="pnlAllTimeBtn">All Time</button>
+                                <div class="week-nav" id="pnlWeekNav" style="display:none">
+                                    <button class="btn-calendar-nav" id="pnlWeekPrev"><i class="fas fa-chevron-left"></i></button>
+                                    <span class="week-nav-label" id="pnlWeekLabel">Week</span>
+                                    <button class="btn-calendar-nav" id="pnlWeekNext"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                                <button class="btn-chart" data-period="week" id="pnlWeekBtn">Weekly</button>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -269,7 +273,18 @@
                         <!-- Charts Section -->
                         <div class="dashboard-charts">
                             <div class="chart-container compact">
-                                <h3>Commissions by Day</h3>
+                                <div class="chart-header compact-header">
+                                    <h3>Commissions by Day</h3>
+                                    <div class="chart-controls">
+                                        <button class="btn-chart active" data-period="all" id="commAllTimeBtn">All Time</button>
+                                        <div class="week-nav" id="commWeekNav" style="display:none">
+                                            <button class="btn-calendar-nav" id="commWeekPrev"><i class="fas fa-chevron-left"></i></button>
+                                            <span class="week-nav-label" id="commWeekLabel">Week</span>
+                                            <button class="btn-calendar-nav" id="commWeekNext"><i class="fas fa-chevron-right"></i></button>
+                                        </div>
+                                        <button class="btn-chart" data-period="week" id="commWeekBtn">Weekly</button>
+                                    </div>
+                                </div>
                                 <canvas id="commissionsByDayChart"></canvas>
                             </div>
                             <div class="chart-container compact">
@@ -825,12 +840,12 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/imageStore.js?v=12"></script>
-    <script src="js/firebaseSync.js?v=12"></script>
-    <script src="js/csvParser.js?v=12"></script>
-    <script src="js/tradeCalculator.js?v=12"></script>
-    <script src="js/ui.js?v=12"></script>
-    <script src="js/main.js?v=12"></script>
+    <script src="js/imageStore.js?v=13"></script>
+    <script src="js/firebaseSync.js?v=13"></script>
+    <script src="js/csvParser.js?v=13"></script>
+    <script src="js/tradeCalculator.js?v=13"></script>
+    <script src="js/ui.js?v=13"></script>
+    <script src="js/main.js?v=13"></script>
 
     <script>
         // Initialize the app

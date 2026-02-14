@@ -805,9 +805,40 @@ body {
 .chart-controls {
     display: flex;
     gap: var(--spacing-1);
+    align-items: center;
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
     padding: 2px;
+}
+
+.week-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.week-nav-label {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    min-width: 130px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-3);
+}
+
+.compact-header h3 {
+    margin: 0;
+}
+
+.compact-header .chart-controls {
+    flex-shrink: 0;
 }
 
 .btn-chart {

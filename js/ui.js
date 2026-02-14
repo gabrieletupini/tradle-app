@@ -541,9 +541,15 @@ class UIController {
      * Update charts
      */
     updateCharts(trades, summary) {
+        // Store trades for weekly filtering
+        this._allChartTrades = trades;
+        this._chartWeekIndex = null; // null = all time
+        this._chartWeeks = this._computeWeekRanges(trades);
+
         this.updateCommissionsByDayChart(trades);
         this.updateDistributionChart(summary);
         this.updatePnLEvolutionChart(trades);
+        this._setupWeekNavControls();
     }
 
     // ===== Monthly Trading Calendar =====
@@ -1545,8 +1551,7 @@ class UIController {
                 }
             }
         });
-
-        this.setupChartControls();
+    }
     }
 
     /**
@@ -1571,22 +1576,142 @@ class UIController {
     }
 
     /**
-     * Setup chart period controls
+     * Compute week ranges from trades (Mon–Sun weeks, sorted chronologically)
      */
-    setupChartControls() {
-        const chartButtons = document.querySelectorAll('.btn-chart');
-        chartButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Remove active class from all buttons
-                chartButtons.forEach(b => b.classList.remove('active'));
-                // Add active class to clicked button
-                e.target.classList.add('active');
+    _computeWeekRanges(trades) {
+        if (!trades || trades.length === 0) return [];
 
-                // You can implement period filtering here
-                const period = e.target.dataset.period;
-                console.log(`Switching to ${period} view`);
-            });
+        const weekMap = {};
+        trades.forEach(trade => {
+            const exitTime = trade.exitTime || trade.soldDate || trade.date;
+            if (!exitTime) return;
+            const d = new Date(exitTime);
+            if (isNaN(d.getTime())) return;
+
+            // Get Monday of this week
+            const day = d.getDay(); // 0=Sun
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+            const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+            const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+
+            if (!weekMap[key]) {
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                weekMap[key] = { start: new Date(monday), end: sunday };
+            }
         });
+
+        return Object.keys(weekMap).sort().map(k => weekMap[k]);
+    }
+
+    /**
+     * Get trades filtered to a specific week range
+     */
+    _filterTradesByWeek(trades, week) {
+        return trades.filter(trade => {
+            const exitTime = trade.exitTime || trade.soldDate || trade.date;
+            if (!exitTime) return false;
+            const d = new Date(exitTime);
+            if (isNaN(d.getTime())) return false;
+            // Compare date only (strip time)
+            const tradeDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            return tradeDay >= week.start && tradeDay <= week.end;
+        });
+    }
+
+    /**
+     * Format a week range as a label (e.g. "Feb 10 – Feb 16")
+     */
+    _formatWeekLabel(week) {
+        const opts = { month: 'short', day: 'numeric' };
+        return `${week.start.toLocaleDateString('en-US', opts)} – ${week.end.toLocaleDateString('en-US', opts)}`;
+    }
+
+    /**
+     * Setup week nav controls for PnL and Commissions charts
+     */
+    _setupWeekNavControls() {
+        // PnL chart controls
+        const pnlAllBtn = document.getElementById('pnlAllTimeBtn');
+        const pnlWeekBtn = document.getElementById('pnlWeekBtn');
+        const pnlWeekNav = document.getElementById('pnlWeekNav');
+        const pnlPrev = document.getElementById('pnlWeekPrev');
+        const pnlNext = document.getElementById('pnlWeekNext');
+
+        // Commissions chart controls
+        const commAllBtn = document.getElementById('commAllTimeBtn');
+        const commWeekBtn = document.getElementById('commWeekBtn');
+        const commWeekNav = document.getElementById('commWeekNav');
+        const commPrev = document.getElementById('commWeekPrev');
+        const commNext = document.getElementById('commWeekNext');
+
+        const setMode = (mode) => {
+            if (mode === 'all') {
+                this._chartWeekIndex = null;
+                // PnL
+                if (pnlAllBtn) pnlAllBtn.classList.add('active');
+                if (pnlWeekBtn) pnlWeekBtn.classList.remove('active');
+                if (pnlWeekNav) pnlWeekNav.style.display = 'none';
+                // Comm
+                if (commAllBtn) commAllBtn.classList.add('active');
+                if (commWeekBtn) commWeekBtn.classList.remove('active');
+                if (commWeekNav) commWeekNav.style.display = 'none';
+
+                this.updatePnLEvolutionChart(this._allChartTrades);
+                this.updateCommissionsByDayChart(this._allChartTrades);
+            } else {
+                // Default to most recent week
+                if (this._chartWeekIndex === null) {
+                    this._chartWeekIndex = this._chartWeeks.length - 1;
+                }
+                // PnL
+                if (pnlAllBtn) pnlAllBtn.classList.remove('active');
+                if (pnlWeekBtn) pnlWeekBtn.classList.add('active');
+                if (pnlWeekNav) pnlWeekNav.style.display = 'flex';
+                // Comm
+                if (commAllBtn) commAllBtn.classList.remove('active');
+                if (commWeekBtn) commWeekBtn.classList.add('active');
+                if (commWeekNav) commWeekNav.style.display = 'flex';
+
+                this._renderWeekCharts();
+            }
+        };
+
+        const navigate = (delta) => {
+            if (this._chartWeekIndex === null) return;
+            this._chartWeekIndex = Math.max(0, Math.min(this._chartWeeks.length - 1, this._chartWeekIndex + delta));
+            this._renderWeekCharts();
+        };
+
+        // Bind PnL buttons
+        if (pnlAllBtn) pnlAllBtn.onclick = () => setMode('all');
+        if (pnlWeekBtn) pnlWeekBtn.onclick = () => setMode('week');
+        if (pnlPrev) pnlPrev.onclick = () => navigate(-1);
+        if (pnlNext) pnlNext.onclick = () => navigate(1);
+
+        // Bind Comm buttons
+        if (commAllBtn) commAllBtn.onclick = () => setMode('all');
+        if (commWeekBtn) commWeekBtn.onclick = () => setMode('week');
+        if (commPrev) commPrev.onclick = () => navigate(-1);
+        if (commNext) commNext.onclick = () => navigate(1);
+    }
+
+    /**
+     * Render both charts for the currently selected week
+     */
+    _renderWeekCharts() {
+        const week = this._chartWeeks[this._chartWeekIndex];
+        if (!week) return;
+
+        const label = this._formatWeekLabel(week);
+        const pnlLabel = document.getElementById('pnlWeekLabel');
+        const commLabel = document.getElementById('commWeekLabel');
+        if (pnlLabel) pnlLabel.textContent = label;
+        if (commLabel) commLabel.textContent = label;
+
+        const weekTrades = this._filterTradesByWeek(this._allChartTrades, week);
+        this.updatePnLEvolutionChart(weekTrades);
+        this.updateCommissionsByDayChart(weekTrades);
     }
 
     /**
