@@ -644,6 +644,34 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Import History (always visible at bottom of Import tab) -->
+                    <div class="import-history-section">
+                        <h3><i class="fas fa-history" style="color: var(--primary-color);"></i> Import History</h3>
+                        <p>A log of every CSV file that's been loaded into the app.</p>
+
+                        <!-- Empty state -->
+                        <div id="uploadHistoryEmpty" class="uh-empty">
+                            <i class="fas fa-inbox"></i>
+                            <p>No imports yet. Choose a format above and upload your first CSV.</p>
+                        </div>
+
+                        <!-- Table (hidden until there's data) -->
+                        <div id="uploadHistoryTableWrap" class="uh-table-wrap" style="display:none;">
+                            <table class="uh-table">
+                                <thead>
+                                    <tr>
+                                        <th>File</th>
+                                        <th>Format</th>
+                                        <th>Date</th>
+                                        <th style="text-align:center">New</th>
+                                        <th style="text-align:center">Dupes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="uploadHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Risk Management Section -->
@@ -868,13 +896,13 @@
                                         trade immediately.</div>
                                 </div>
                             </div>
-                                <p class="rm-explainer-formula">Formula: RoR = ((1 − Edge) ÷ (1 + Edge)) ^ (Account ÷
-                                    Risk per trade)</p>
-                                <p class="rm-explainer-tip"><i class="fas fa-lightbulb"></i> The two biggest levers to
-                                    reduce ruin are: <strong>1)</strong> smaller position sizes, and <strong>2)</strong>
-                                    improving your edge (higher win rate or better R:R).</p>
-                            </div>
+                            <p class="rm-explainer-formula">Formula: RoR = ((1 − Edge) ÷ (1 + Edge)) ^ (Account ÷
+                                Risk per trade)</p>
+                            <p class="rm-explainer-tip"><i class="fas fa-lightbulb"></i> The two biggest levers to
+                                reduce ruin are: <strong>1)</strong> smaller position sizes, and <strong>2)</strong>
+                                improving your edge (higher win rate or better R:R).</p>
                         </div>
+                    </div>
 
                 </section>
 
@@ -982,42 +1010,6 @@
                                     <i class="fas fa-hourglass-half"></i>
                                     Coming Soon
                                 </button>
-                            </div>
-                        </div>
-
-                        <hr
-                            style="border: none; border-top: 1px solid var(--border-light); margin: var(--spacing-6) 0;">
-
-                        <!-- Upload History -->
-                        <div class="backup-section" style="margin-bottom: var(--spacing-8);">
-                            <h3 style="margin-bottom: var(--spacing-4); color: var(--text-primary);">
-                                <i class="fas fa-history" style="color: var(--primary-color);"></i> Upload History
-                            </h3>
-                            <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
-                                A log of every CSV file you've imported into the app.
-                            </p>
-
-                            <!-- Empty state -->
-                            <div id="uploadHistoryEmpty" class="uh-empty">
-                                <i class="fas fa-inbox"></i>
-                                <p>No uploads yet. Import a CSV from the <strong>Import Data</strong> tab to get
-                                    started.</p>
-                            </div>
-
-                            <!-- Table (hidden until there's data) -->
-                            <div id="uploadHistoryTableWrap" class="uh-table-wrap" style="display:none;">
-                                <table class="uh-table">
-                                    <thead>
-                                        <tr>
-                                            <th>File</th>
-                                            <th>Format</th>
-                                            <th>Date</th>
-                                            <th style="text-align:center">New</th>
-                                            <th style="text-align:center">Dupes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="uploadHistoryBody"></tbody>
-                                </table>
                             </div>
                         </div>
 

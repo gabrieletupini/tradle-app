@@ -2420,8 +2420,31 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
-   Upload History
+   Upload / Import History
    ═══════════════════════════════════════════════════ */
+
+.import-history-section {
+    margin-top: var(--spacing-8);
+    padding-top: var(--spacing-6);
+    border-top: 1px solid var(--border-light);
+}
+
+.import-history-section > h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.import-history-section > h3 i {
+    margin-right: 6px;
+}
+
+.import-history-section > p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-4);
+}
 
 .uh-empty {
     text-align: center;

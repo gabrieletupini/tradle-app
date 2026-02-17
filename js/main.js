@@ -148,8 +148,12 @@ class TradleApp {
                 tradeResult.trades.forEach(t => t.broker = brokerLabel);
 
                 // Merge with database (handles deduplication)
-                this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+                const dedup = this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
                 anyLoaded = true;
+
+                // Log to upload history so it appears in Import History
+                const sampleName = sample.path.split('/').pop();
+                this.logUploadHistory(sampleName, sample.format, dedup.newTrades, dedup.duplicates);
 
                 console.log(`✅ Auto-loaded ${tradeResult.trades.length} trades from ${sample.path}`);
 
