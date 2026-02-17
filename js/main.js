@@ -115,18 +115,13 @@ class TradleApp {
             { path: 'data/sample-data/ibkr-trade-report-2026-02-12.csv', format: 'ibkr' }
         ];
 
-        // Migration: clean up stale sample-file history entries
-        // (old names from before rename, and entries with 0 new trades from first deploy)
+        // Migration: ALWAYS remove stale sample-file history entries so they get re-logged with correct counts
         try {
             const oldNames = ['sample-tradingview-data.csv', 'sample-ibkr-data.csv'];
             const currentSampleNames = sampleFiles.map(s => s.path.split('/').pop());
+            const allSampleNames = [...oldNames, ...currentSampleNames];
             let hist = this.getUploadHistory();
-            const cleaned = hist.filter(h => {
-                if (oldNames.includes(h.filename)) return false;
-                // Remove sample entries that logged 0 new (stale from before fix)
-                if (currentSampleNames.includes(h.filename) && h.newTrades === 0) return false;
-                return true;
-            });
+            const cleaned = hist.filter(h => !allSampleNames.includes(h.filename));
             if (cleaned.length !== hist.length) {
                 localStorage.setItem('tradle_upload_history', JSON.stringify(cleaned));
             }
@@ -178,12 +173,8 @@ class TradleApp {
                 const existingHistory = this.getUploadHistory();
                 const alreadyLogged = existingHistory.some(h => h.filename === sampleName);
                 if (!alreadyLogged) {
-                    // For first-time logging of sample CSVs, the trades are likely
-                    // already in the DB from before we had history tracking, so dedup
-                    // would show 0 new. Use total trade count as "new" instead.
-                    const totalTrades = tradeResult.trades.length;
-                    const actualNew = dedup.newTrades > 0 ? dedup.newTrades : totalTrades;
-                    this.logUploadHistory(sampleName, sample.format, actualNew, 0);
+                    // Sample CSVs are the baseline data — always show total trades as "new"
+                    this.logUploadHistory(sampleName, sample.format, tradeResult.trades.length, 0);
                 }
 
                 console.log(`✅ Auto-loaded ${tradeResult.trades.length} trades from ${sample.path}`);
