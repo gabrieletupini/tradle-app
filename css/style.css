@@ -2523,6 +2523,23 @@ body {
     color: #dc2626;
 }
 
+/* Delete button inside upload-history rows */
+.uh-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    transition: color 0.15s, background 0.15s;
+}
+
+.uh-delete-btn:hover {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.08);
+}
+
 /* ═══════════════════════════════════════════════════
    Danger Zone
    ═══════════════════════════════════════════════════ */

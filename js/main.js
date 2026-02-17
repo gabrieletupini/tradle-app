@@ -111,9 +111,19 @@ class TradleApp {
      */
     async autoLoadDefaultCSV() {
         const sampleFiles = [
-            { path: 'data/sample-data/sample-tradingview-data.csv', format: 'tradingview' },
-            { path: 'data/sample-data/sample-ibkr-data.csv', format: 'ibkr' }
+            { path: 'data/sample-data/paper-trading-order-history-2026-02-12.csv', format: 'tradingview' },
+            { path: 'data/sample-data/ibkr-trade-report-2026-02-12.csv', format: 'ibkr' }
         ];
+
+        // Migration: clean up old sample-file history entries from before the rename
+        try {
+            const oldNames = ['sample-tradingview-data.csv', 'sample-ibkr-data.csv'];
+            let hist = this.getUploadHistory();
+            const cleaned = hist.filter(h => !oldNames.includes(h.filename));
+            if (cleaned.length !== hist.length) {
+                localStorage.setItem('tradle_upload_history', JSON.stringify(cleaned));
+            }
+        } catch (_) { /* ignore */ }
 
         let anyLoaded = false;
 
@@ -219,6 +229,19 @@ class TradleApp {
         // Render upload history on load
         if (typeof this.uiController.renderUploadHistory === 'function') {
             this.uiController.renderUploadHistory(this.getUploadHistory());
+        }
+
+        // Delete upload-history entry (event delegation)
+        const uhBody = document.getElementById('uploadHistoryBody');
+        if (uhBody) {
+            uhBody.addEventListener('click', (e) => {
+                const btn = e.target.closest('.uh-delete-btn');
+                if (!btn) return;
+                const idx = parseInt(btn.dataset.idx, 10);
+                if (isNaN(idx)) return;
+                const updated = this.deleteUploadHistoryEntry(idx);
+                this.uiController.renderUploadHistory(updated);
+            });
         }
 
     }
@@ -480,7 +503,7 @@ class TradleApp {
             const sampleCSV = this.csvParser.getSampleCSVData();
 
             // Create a mock file object
-            const mockFile = new File([sampleCSV], 'sample-tradingview-data.csv', {
+            const mockFile = new File([sampleCSV], 'paper-trading-order-history-2026-02-12.csv', {
                 type: 'text/csv'
             });
 
@@ -972,6 +995,23 @@ class TradleApp {
             console.log(`📜 Upload history logged: ${filename}`);
         } catch (e) {
             console.warn('⚠️ Failed to log upload history:', e);
+        }
+    }
+
+    /**
+     * Delete a single upload history entry by index
+     */
+    deleteUploadHistoryEntry(index) {
+        try {
+            const history = this.getUploadHistory();
+            if (index >= 0 && index < history.length) {
+                history.splice(index, 1);
+                localStorage.setItem('tradle_upload_history', JSON.stringify(history));
+            }
+            return history;
+        } catch (e) {
+            console.warn('⚠️ Failed to delete history entry:', e);
+            return this.getUploadHistory();
         }
     }
 

@@ -3699,7 +3699,9 @@ class UIController {
         if (emptyState) emptyState.style.display = 'none';
 
         // Render rows newest-first
+        const len = history.length;
         container.innerHTML = history.slice().reverse().map((h, i) => {
+            const origIdx = len - 1 - i; // index in the original (non-reversed) array
             const d = new Date(h.date);
             const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -3710,6 +3712,7 @@ class UIController {
                     <td>${dateStr} <span style="color:var(--text-tertiary)">${timeStr}</span></td>
                     <td style="text-align:center">${h.newTrades}</td>
                     <td style="text-align:center">${h.duplicates}</td>
+                    <td style="text-align:center"><button class="uh-delete-btn" data-idx="${origIdx}" title="Remove entry"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>`;
         }).join('');
     }

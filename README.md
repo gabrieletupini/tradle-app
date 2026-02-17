@@ -52,8 +52,8 @@ tradle-app/
 │
 ├── data/
 │   └── sample-data/            ← demo CSVs loaded on first visit
-│       ├── sample-tradingview-data.csv
-│       └── sample-ibkr-data.csv
+│       ├── paper-trading-order-history-2026-02-12.csv
+│       └── ibkr-trade-report-2026-02-12.csv
 │
 ├── tests/                      ← test & debug scripts
 │   ├── fixtures/               ← test CSV files

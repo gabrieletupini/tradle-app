@@ -427,7 +427,7 @@
     .uh-table th:nth-child(5),
     .uh-table td:nth-child(5) {
         display: none;
-        /* hide Dupes column on mobile */
+        /* hide Duplicates column on mobile */
     }
 
     .uh-table th,
