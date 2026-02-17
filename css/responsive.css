@@ -422,6 +422,32 @@
     .summary-card:last-child {
         margin-right: 0;
     }
+
+    /* Upload History responsive */
+    .uh-table th:nth-child(5),
+    .uh-table td:nth-child(5) {
+        display: none;
+        /* hide Dupes column on mobile */
+    }
+
+    .uh-table th,
+    .uh-table td {
+        padding: 8px 8px;
+        font-size: 0.78rem;
+    }
+
+    /* Danger Zone responsive */
+    .danger-card-body {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .danger-card-body .btn-danger,
+    .danger-card-body .btn-danger-outline {
+        width: 100%;
+        margin-top: var(--spacing-3);
+    }
 }
 
 /* Landscape Orientation on Mobile */

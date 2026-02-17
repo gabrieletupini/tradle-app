@@ -16,6 +16,7 @@ class UIController {
         this.bindEvents();
         this.initLiquidity();
         this.initCalendar();
+        this.initRiskManager();
     }
 
     /**
@@ -28,6 +29,7 @@ class UIController {
         // Sections
         this.dashboardSection = document.getElementById('dashboardSection');
         this.importSection = document.getElementById('importSection');
+        this.riskSection = document.getElementById('riskSection');
         this.exportSection = document.getElementById('exportSection');
 
         // Keep legacy reference for backward compatibility
@@ -3102,6 +3104,449 @@ class UIController {
         }).format(date);
     }
 
+    // ===== Risk Management =====
+
+    /**
+     * CONTRACT_SPECS for risk calculations — mirrors TradeCalculator
+     * Each entry: { multiplier, commission, name, tickSize }
+     * tickSize = minimum price increment for the instrument
+     */
+    static RISK_CONTRACTS = {
+        'ES1!': { multiplier: 50, commission: 2.50, name: 'E-mini S&P 500', tickSize: 0.25 },
+        'MES1!': { multiplier: 5, commission: 0.62, name: 'Micro E-mini S&P 500', tickSize: 0.25 },
+        'NQ1!': { multiplier: 20, commission: 2.50, name: 'E-mini Nasdaq-100', tickSize: 0.25 },
+        'MNQ1!': { multiplier: 2, commission: 0.62, name: 'Micro E-mini Nasdaq-100', tickSize: 0.25 },
+        'YM1!': { multiplier: 5, commission: 2.50, name: 'E-mini Dow', tickSize: 1.00 },
+        'MYM1!': { multiplier: 0.50, commission: 0.62, name: 'Micro E-mini Dow', tickSize: 1.00 },
+        'RTY1!': { multiplier: 50, commission: 2.50, name: 'E-mini Russell 2000', tickSize: 0.10 },
+        'M2K1!': { multiplier: 5, commission: 0.62, name: 'Micro E-mini Russell 2000', tickSize: 0.10 },
+        'CL1!': { multiplier: 1000, commission: 2.50, name: 'Crude Oil', tickSize: 0.01 },
+        'MCL1!': { multiplier: 100, commission: 0.62, name: 'Micro Crude Oil', tickSize: 0.01 },
+        'GC1!': { multiplier: 100, commission: 2.50, name: 'Gold', tickSize: 0.10 },
+        'MGC1!': { multiplier: 10, commission: 0.62, name: 'Micro Gold', tickSize: 0.10 },
+    };
+
+    /**
+     * Initialise risk-management tab inputs, load saved values, bind listeners
+     */
+    initRiskManager() {
+        // Default values
+        const defaults = {
+            riskYearlyGoal: 60000,
+            riskMonthlyGoal: 5000,
+            riskAccountSize: 100000,
+            riskTradingDays: 21,
+            riskTradesPerDay: 3,
+            riskWinRate: 55,
+            riskAvgRR: 2.0,
+            riskTierLowPct: 0.5,
+            riskTierMedPct: 1.0,
+            riskTierHighPct: 2.0,
+        };
+
+        this._riskInputIds = Object.keys(defaults);
+        this._riskSyncing = false; // guard against infinite loop
+
+        // Load each input from localStorage or use default
+        this._riskInputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const saved = localStorage.getItem('tradle_' + id);
+            el.value = saved !== null ? saved : defaults[id];
+
+            el.addEventListener('input', () => {
+                localStorage.setItem('tradle_' + id, el.value);
+                this.recalcRisk();
+            });
+        });
+
+        // Populate contract dropdown (main + checker)
+        const sel = document.getElementById('riskContractSelect');
+        const checkerSel = document.getElementById('checkerContract');
+        if (sel) {
+            const savedContract = localStorage.getItem('tradle_riskContract') || 'MES1!';
+            for (const [sym, spec] of Object.entries(UIController.RISK_CONTRACTS)) {
+                const opt = document.createElement('option');
+                opt.value = sym;
+                opt.textContent = `${sym}  —  ${spec.name}`;
+                if (sym === savedContract) opt.selected = true;
+                sel.appendChild(opt);
+
+                // Clone into checker dropdown
+                if (checkerSel) {
+                    const opt2 = opt.cloneNode(true);
+                    checkerSel.appendChild(opt2);
+                }
+            }
+            sel.addEventListener('change', () => {
+                localStorage.setItem('tradle_riskContract', sel.value);
+                this.recalcRisk();
+            });
+        }
+
+        // Bidirectional yearly ↔ monthly sync
+        const yearlyEl = document.getElementById('riskYearlyGoal');
+        const monthlyEl = document.getElementById('riskMonthlyGoal');
+        if (yearlyEl && monthlyEl) {
+            yearlyEl.addEventListener('input', () => {
+                if (this._riskSyncing) return;
+                this._riskSyncing = true;
+                const y = parseFloat(yearlyEl.value) || 0;
+                monthlyEl.value = Math.round(y / 12);
+                localStorage.setItem('tradle_riskMonthlyGoal', monthlyEl.value);
+                this._riskSyncing = false;
+                this.recalcRisk();
+            });
+            monthlyEl.addEventListener('input', () => {
+                if (this._riskSyncing) return;
+                this._riskSyncing = true;
+                const m = parseFloat(monthlyEl.value) || 0;
+                yearlyEl.value = Math.round(m * 12);
+                localStorage.setItem('tradle_riskYearlyGoal', yearlyEl.value);
+                this._riskSyncing = false;
+                this.recalcRisk();
+            });
+        }
+
+        // Trade checker inputs
+        const checkerEntry = document.getElementById('checkerEntry');
+        const checkerStop = document.getElementById('checkerStop');
+        if (checkerSel) checkerSel.addEventListener('change', () => this._updateTradeChecker());
+        if (checkerEntry) checkerEntry.addEventListener('input', () => this._updateTradeChecker());
+        if (checkerStop) checkerStop.addEventListener('input', () => this._updateTradeChecker());
+
+        // Tooltip system for .rm-help
+        this._initRiskTooltips();
+
+        this.recalcRisk();
+    }
+
+    /**
+     * Tooltip system — show/hide on hover for .rm-help icons
+     */
+    _initRiskTooltips() {
+        let tip = document.getElementById('rmTooltip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'rmTooltip';
+            tip.className = 'rm-tooltip';
+            document.body.appendChild(tip);
+        }
+
+        document.querySelectorAll('.rm-help').forEach(icon => {
+            icon.addEventListener('mouseenter', e => {
+                tip.textContent = icon.getAttribute('data-tip');
+                tip.classList.add('visible');
+                const r = icon.getBoundingClientRect();
+                tip.style.left = Math.min(r.left, window.innerWidth - 320) + 'px';
+                tip.style.top = (r.bottom + 8) + 'px';
+            });
+            icon.addEventListener('mouseleave', () => {
+                tip.classList.remove('visible');
+            });
+            // For touch devices
+            icon.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                tip.textContent = icon.getAttribute('data-tip');
+                const isVisible = tip.classList.contains('visible');
+                tip.classList.toggle('visible', !isVisible);
+                if (!isVisible) {
+                    const r = icon.getBoundingClientRect();
+                    tip.style.left = Math.min(r.left, window.innerWidth - 320) + 'px';
+                    tip.style.top = (r.bottom + 8) + 'px';
+                }
+            });
+        });
+    }
+
+    /**
+     * Core recalculation — derives targets, builds tier cards for ONE contract,
+     * computes Kelly / edge / ruin.
+     */
+    recalcRisk() {
+        const v = (id, fallback = 0) => {
+            const el = document.getElementById(id);
+            return el ? (parseFloat(el.value) || fallback) : fallback;
+        };
+
+        const monthlyGoal = v('riskMonthlyGoal', 5000);
+        const accountSize = v('riskAccountSize', 100000);
+        const tradingDays = v('riskTradingDays', 21);
+        const tradesPerDay = v('riskTradesPerDay', 3);
+        const winRate = v('riskWinRate', 55) / 100;
+        const avgRR = v('riskAvgRR', 2.0);
+
+        const tierLowPct = v('riskTierLowPct', 0.5) / 100;
+        const tierMedPct = v('riskTierMedPct', 1.0) / 100;
+        const tierHighPct = v('riskTierHighPct', 2.0) / 100;
+
+        // Derived targets
+        const weeklyTarget = monthlyGoal / (tradingDays / 5);
+        const dailyTarget = monthlyGoal / tradingDays;
+        const totalTrades = tradingDays * tradesPerDay;
+        const perTrade = monthlyGoal / totalTrades;
+        const maxDailyDD = dailyTarget * 3;
+
+        this._setText('riskWeeklyTarget', this.formatCurrency(weeklyTarget));
+        this._setText('riskDailyTarget', this.formatCurrency(dailyTarget));
+        this._setText('riskPerTrade', this.formatCurrency(perTrade));
+        this._setText('riskMaxDailyDD', '-' + this.formatCurrency(maxDailyDD));
+
+        // Selected contract
+        const sel = document.getElementById('riskContractSelect');
+        const sym = sel ? sel.value : 'MES1!';
+        const spec = UIController.RISK_CONTRACTS[sym] || UIController.RISK_CONTRACTS['MES1!'];
+
+        // Contract info chips
+        const infoEl = document.getElementById('riskContractInfo');
+        if (infoEl) {
+            infoEl.innerHTML = `
+                <span class="info-chip"><strong>${spec.name}</strong></span>
+                <span class="info-chip">Multiplier: <strong>$${spec.multiplier}</strong>/pt</span>
+                <span class="info-chip">Tick: <strong>${spec.tickSize}</strong></span>
+                <span class="info-chip">Commission: <strong>$${spec.commission.toFixed(2)}</strong></span>
+            `;
+        }
+
+        // Build tier cards for this one contract — with graphical bar breakdown
+        const tiers = [
+            { pct: tierLowPct, bodyId: 'tierLowBody', label: 'Conservative', color: 'var(--success-color)' },
+            { pct: tierMedPct, bodyId: 'tierMedBody', label: 'Moderate', color: 'var(--warning-color)' },
+            { pct: tierHighPct, bodyId: 'tierHighBody', label: 'Aggressive', color: 'var(--danger-color)' },
+        ];
+
+        // Store for trade checker
+        this._riskTiers = { accountSize, spec, tiers: [] };
+
+        tiers.forEach(tier => {
+            const maxRisk = accountSize * tier.pct;
+            const stopPts1 = maxRisk / spec.multiplier;
+            const stopPtsSnapped = Math.floor(stopPts1 / spec.tickSize) * spec.tickSize;
+            const stopDollar1 = stopPtsSnapped * spec.multiplier;
+            const reward1 = stopDollar1 * avgRR;
+
+            // Store for trade checker
+            this._riskTiers.tiers.push({ pct: tier.pct, maxRisk, label: tier.label, color: tier.color });
+
+            // Graphical bar: risk vs reward for 1 contract
+            const maxBar = Math.max(stopDollar1, reward1) || 1;
+            const riskW = Math.round((stopDollar1 / maxBar) * 100);
+            const rewW = Math.round((reward1 / maxBar) * 100);
+
+            // Stop distances
+            const stops = [5, 10, 15, 20].map(ticks => {
+                const pts = ticks * spec.tickSize;
+                const dollarPerContract = pts * spec.multiplier;
+                const maxC = dollarPerContract > 0 ? Math.floor(maxRisk / dollarPerContract) : 0;
+                return { ticks, pts, maxC, dollar: dollarPerContract };
+            });
+
+            const body = document.getElementById(tier.bodyId);
+            if (!body) return;
+            body.innerHTML = `
+                <div class="tier-max-risk">Max risk: ${this.formatCurrency(maxRisk)}  ·  ${(tier.pct * 100).toFixed(1)}% of account</div>
+                <div class="tier-visual">
+                    <div class="tier-vis-row">
+                        <span class="tier-vis-label">Risk (1 ct)</span>
+                        <div class="tier-vis-bar-wrap">
+                            <div class="tier-vis-bar tier-vis-risk" style="width:${riskW}%"></div>
+                        </div>
+                        <span class="tier-vis-amt danger">-${this.formatCurrency(stopDollar1)}</span>
+                    </div>
+                    <div class="tier-vis-row">
+                        <span class="tier-vis-label">Reward (${avgRR}R)</span>
+                        <div class="tier-vis-bar-wrap">
+                            <div class="tier-vis-bar tier-vis-reward" style="width:${rewW}%"></div>
+                        </div>
+                        <span class="tier-vis-amt" style="color:var(--success-color)">+${this.formatCurrency(reward1)}</span>
+                    </div>
+                </div>
+                <div class="tier-stat">
+                    <span class="tier-stat-label">Max stop (1 ct)</span>
+                    <span class="tier-stat-value">${stopPtsSnapped.toFixed(2)} pts</span>
+                </div>
+                ${stops.map(s => `
+                    <div class="tier-stat">
+                        <span class="tier-stat-label">${s.ticks}-tick stop (${s.pts.toFixed(2)} pts)</span>
+                        <span class="tier-stat-value">${s.maxC} ct${s.maxC !== 1 ? 's' : ''} · -${this.formatCurrency(s.dollar)}/ct</span>
+                    </div>
+                `).join('')}
+            `;
+        });
+
+        // Kelly Criterion: K = W - (1-W)/RR
+        const kelly = winRate - (1 - winRate) / avgRR;
+        const kellyPct = Math.max(0, kelly * 100);
+        this._setText('riskKelly', kellyPct.toFixed(1) + '%');
+        const kellyNote = document.getElementById('riskKellyNote');
+        if (kellyNote) {
+            if (kelly <= 0) {
+                kellyNote.textContent = 'No edge — do not risk capital';
+                kellyNote.style.color = 'var(--danger-color)';
+            } else if (kellyPct > 25) {
+                kellyNote.textContent = 'Use ½ or ¼ Kelly for safety';
+                kellyNote.style.color = 'var(--warning-color)';
+            } else {
+                kellyNote.textContent = `Half-Kelly → ${(kellyPct / 2).toFixed(1)}% per trade`;
+                kellyNote.style.color = 'var(--success-color)';
+            }
+        }
+
+        // Break-Even: BE = 1/(1+RR)
+        const breakEven = 1 / (1 + avgRR);
+        this._setText('riskBreakEven', (breakEven * 100).toFixed(1) + '%');
+        const beNote = document.getElementById('riskBreakEvenNote');
+        if (beNote) {
+            beNote.textContent = winRate > breakEven
+                ? `${((winRate - breakEven) * 100).toFixed(1)}% above break-even ✓`
+                : `Need ${((breakEven - winRate) * 100).toFixed(1)}% more`;
+            beNote.style.color = winRate > breakEven ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+
+        // Edge
+        const edge = winRate - breakEven;
+        const edgeEl = document.getElementById('riskEdge');
+        if (edgeEl) {
+            edgeEl.textContent = (edge > 0 ? '+' : '') + (edge * 100).toFixed(1) + '%';
+            edgeEl.style.color = edge > 0 ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+        const edgeNote = document.getElementById('riskEdgeNote');
+        if (edgeNote) {
+            edgeNote.textContent = edge > 0 ? 'Profitable system ✓' : 'Adjust R:R or win rate';
+            edgeNote.style.color = edge > 0 ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+
+        // Risk of Ruin
+        const riskPerTradeMed = accountSize * tierMedPct;
+        const units = riskPerTradeMed > 0 ? accountSize / riskPerTradeMed : 100;
+        let ror = 0;
+        if (edge > 0) {
+            ror = Math.pow((1 - edge) / (1 + edge), units) * 100;
+        } else {
+            ror = 100;
+        }
+        ror = Math.min(100, Math.max(0, ror));
+
+        const ruinBar = document.getElementById('riskRuinBar');
+        if (ruinBar) ruinBar.style.width = ror + '%';
+        const ruinVal = document.getElementById('riskRuinValue');
+        if (ruinVal) {
+            ruinVal.textContent = ror < 0.01 ? '< 0.01%' : ror.toFixed(2) + '%';
+            ruinVal.style.color = ror < 1 ? 'var(--success-color)' : ror < 10 ? 'var(--warning-color)' : 'var(--danger-color)';
+        }
+
+        // Also update the trade checker if values are present
+        this._updateTradeChecker();
+    }
+
+    /**
+     * Trade Checker — evaluates a specific entry/stop against your risk tiers
+     */
+    _updateTradeChecker() {
+        const result = document.getElementById('checkerResult');
+        if (!result) return;
+
+        const selEl = document.getElementById('checkerContract');
+        const entryEl = document.getElementById('checkerEntry');
+        const stopEl = document.getElementById('checkerStop');
+        if (!selEl || !entryEl || !stopEl) return;
+
+        const entry = parseFloat(entryEl.value);
+        const stop = parseFloat(stopEl.value);
+        if (!entry || !stop || entry === stop) {
+            result.innerHTML = '<div class="rm-checker-empty"><i class="fas fa-arrow-up"></i> Enter entry &amp; stop above</div>';
+            return;
+        }
+
+        const sym = selEl.value;
+        const spec = UIController.RISK_CONTRACTS[sym] || UIController.RISK_CONTRACTS['MES1!'];
+        const stopDist = Math.abs(entry - stop);
+        const dollarRisk1 = stopDist * spec.multiplier;
+        const direction = entry > stop ? 'Long' : 'Short';
+        const tiers = this._riskTiers ? this._riskTiers.tiers : [];
+        const accountSize = this._riskTiers ? this._riskTiers.accountSize : 100000;
+        const riskPct = accountSize > 0 ? (dollarRisk1 / accountSize) * 100 : 0;
+
+        // Determine which tier this falls into
+        let tierLabel = 'Beyond Aggressive';
+        let tierColor = 'var(--danger-color)';
+        let tierIcon = 'fas fa-exclamation-triangle';
+        let tierBg = 'rgba(220,38,38,0.08)';
+        let maxContracts = 0;
+
+        // Sort tiers ascending by pct
+        const sorted = [...tiers].sort((a, b) => a.pct - b.pct);
+        for (const t of sorted) {
+            if (dollarRisk1 <= t.maxRisk) {
+                tierLabel = t.label;
+                tierColor = t.color;
+                maxContracts = dollarRisk1 > 0 ? Math.floor(t.maxRisk / dollarRisk1) : 0;
+                if (t.label === 'Conservative') { tierIcon = 'fas fa-shield-alt'; tierBg = 'rgba(5,150,105,0.08)'; }
+                else if (t.label === 'Moderate') { tierIcon = 'fas fa-balance-scale'; tierBg = 'rgba(217,119,6,0.08)'; }
+                else { tierIcon = 'fas fa-fire'; tierBg = 'rgba(220,38,38,0.08)'; }
+                break;
+            }
+        }
+
+        // If dollar risk exceeds even the highest tier
+        if (tierLabel === 'Beyond Aggressive') {
+            const highestTier = sorted[sorted.length - 1];
+            maxContracts = highestTier && dollarRisk1 > 0 ? Math.floor(highestTier.maxRisk / dollarRisk1) : 0;
+        }
+
+        const avgRR = this._riskTiers ? (parseFloat(document.getElementById('riskAvgRR')?.value) || 2) : 2;
+        const potentialReward = dollarRisk1 * avgRR;
+
+        result.innerHTML = `
+            <div class="checker-verdict" style="background:${tierBg}; border-color:${tierColor}">
+                <div class="checker-verdict-icon" style="color:${tierColor}"><i class="${tierIcon}"></i></div>
+                <div class="checker-verdict-text">
+                    <div class="checker-verdict-tier" style="color:${tierColor}">${tierLabel}</div>
+                    <div class="checker-verdict-sub">${direction} · ${stopDist.toFixed(2)} pts stop · ${riskPct.toFixed(2)}% of account</div>
+                </div>
+            </div>
+            <div class="checker-details">
+                <div class="checker-detail">
+                    <span class="checker-detail-lbl">Dollar Risk (1 ct)</span>
+                    <span class="checker-detail-val danger">-${this.formatCurrency(dollarRisk1)}</span>
+                </div>
+                <div class="checker-detail">
+                    <span class="checker-detail-lbl">Commission</span>
+                    <span class="checker-detail-val">$${spec.commission.toFixed(2)}</span>
+                </div>
+                <div class="checker-detail">
+                    <span class="checker-detail-lbl">Max Contracts</span>
+                    <span class="checker-detail-val">${maxContracts}</span>
+                </div>
+                <div class="checker-detail">
+                    <span class="checker-detail-lbl">Max $ at Risk (${maxContracts} ct${maxContracts !== 1 ? 's' : ''})</span>
+                    <span class="checker-detail-val danger">-${this.formatCurrency(dollarRisk1 * maxContracts)}</span>
+                </div>
+                <div class="checker-detail">
+                    <span class="checker-detail-lbl">Potential Reward (${avgRR}R, ${maxContracts} ct${maxContracts !== 1 ? 's' : ''})</span>
+                    <span class="checker-detail-val" style="color:var(--success-color)">+${this.formatCurrency(potentialReward * maxContracts)}</span>
+                </div>
+            </div>
+            <div class="checker-vis">
+                <div class="checker-vis-row">
+                    <div class="checker-vis-bar checker-vis-risk" style="flex:${dollarRisk1}"></div>
+                    <div class="checker-vis-bar checker-vis-reward" style="flex:${potentialReward}"></div>
+                </div>
+                <div class="checker-vis-labels">
+                    <span class="danger">Risk: ${this.formatCurrency(dollarRisk1 * maxContracts)}</span>
+                    <span style="color:var(--success-color)">Reward: ${this.formatCurrency(potentialReward * maxContracts)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /** Helper: set textContent by id */
+    _setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+
     /**
      * Switch between tabs
      */
@@ -3125,6 +3570,7 @@ class UIController {
         const sectionMap = {
             'dashboard': this.dashboardSection,
             'import': this.importSection,
+            'risk': this.riskSection,
             'export': this.exportSection
         };
 
@@ -3232,6 +3678,47 @@ class UIController {
             if (this.csvFileInput) this.csvFileInput.value = '';
             if (this.ibkrCsvFileInput) this.ibkrCsvFileInput.value = '';
         }
+    }
+
+    /**
+     * Render the upload history table inside the Export tab
+     */
+    renderUploadHistory(history) {
+        const container = document.getElementById('uploadHistoryBody');
+        const emptyState = document.getElementById('uploadHistoryEmpty');
+        const tableWrap = document.getElementById('uploadHistoryTableWrap');
+        if (!container) return;
+
+        if (!history || history.length === 0) {
+            if (tableWrap) tableWrap.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (tableWrap) tableWrap.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+
+        // Render rows newest-first
+        container.innerHTML = history.slice().reverse().map((h, i) => {
+            const d = new Date(h.date);
+            const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            return `
+                <tr>
+                    <td><i class="fas fa-file-csv" style="color:var(--primary-color);margin-right:6px"></i>${this._escapeHtml(h.filename)}</td>
+                    <td><span class="uh-badge uh-badge--${h.format === 'IBKR' ? 'ibkr' : 'tv'}">${h.format}</span></td>
+                    <td>${dateStr} <span style="color:var(--text-tertiary)">${timeStr}</span></td>
+                    <td style="text-align:center">${h.newTrades}</td>
+                    <td style="text-align:center">${h.duplicates}</td>
+                </tr>`;
+        }).join('');
+    }
+
+    /** Escape HTML entities */
+    _escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 }
 

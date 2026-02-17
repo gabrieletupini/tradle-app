@@ -83,6 +83,10 @@
                         <i class="fas fa-upload"></i>
                         <span>Import Data</span>
                     </button>
+                    <button class="nav-tab" data-tab="risk">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Risk</span>
+                    </button>
                     <button class="nav-tab" data-tab="export">
                         <i class="fas fa-download"></i>
                         <span>Export</span>
@@ -642,6 +646,239 @@
                     </div>
                 </section>
 
+                <!-- Risk Management Section -->
+                <section class="risk-section tab-content" id="riskSection" style="display: none;">
+
+                    <!-- ─── Inputs Card ─── -->
+                    <div class="rm-card rm-inputs-card">
+                        <div class="rm-card-head">
+                            <h2><i class="fas fa-shield-alt"></i> Risk Management</h2>
+                            <p>Set your objectives, pick a contract, and the math does the rest.</p>
+                        </div>
+
+                        <div class="rm-grid rm-grid-3">
+                            <label class="rm-label">
+                                <span><i class="fas fa-calendar"></i> Yearly Goal <i
+                                        class="fas fa-question-circle rm-help"
+                                        data-tip="Your total profit target for the year. Editing monthly auto-updates this (×12) and vice versa."></i></span>
+                                <div class="rm-inp-wrap"><span class="rm-pre">$</span><input type="number"
+                                        id="riskYearlyGoal" min="0" step="1000" placeholder="60,000" /></div>
+                            </label>
+                            <label class="rm-label">
+                                <span><i class="fas fa-calendar-week"></i> Monthly Goal <i
+                                        class="fas fa-question-circle rm-help"
+                                        data-tip="Your monthly profit target. Changing this auto-calculates the yearly goal (×12)."></i></span>
+                                <div class="rm-inp-wrap"><span class="rm-pre">$</span><input type="number"
+                                        id="riskMonthlyGoal" min="0" step="500" placeholder="5,000" /></div>
+                            </label>
+                            <label class="rm-label">
+                                <span><i class="fas fa-wallet"></i> Account Size <i
+                                        class="fas fa-question-circle rm-help"
+                                        data-tip="Your total trading capital. Risk tiers are calculated as a percentage of this amount."></i></span>
+                                <div class="rm-inp-wrap"><span class="rm-pre">$</span><input type="number"
+                                        id="riskAccountSize" min="0" step="1000" placeholder="100,000" /></div>
+                            </label>
+                        </div>
+
+                        <div class="rm-grid rm-grid-4">
+                            <label class="rm-label sm">
+                                <span><i class="fas fa-business-time"></i> Days / Mo</span>
+                                <input type="number" id="riskTradingDays" min="1" max="31" step="1" placeholder="21" />
+                            </label>
+                            <label class="rm-label sm">
+                                <span><i class="fas fa-redo"></i> Trades / Day</span>
+                                <input type="number" id="riskTradesPerDay" min="1" max="50" step="1" placeholder="3" />
+                            </label>
+                            <label class="rm-label sm">
+                                <span><i class="fas fa-percentage"></i> Win Rate <i
+                                        class="fas fa-question-circle rm-help"
+                                        data-tip="Your historical win rate. Used to compute Kelly Criterion, break-even, and your edge."></i></span>
+                                <div class="rm-inp-wrap rm-has-suffix"><input type="number" id="riskWinRate" min="0"
+                                        max="100" step="1" placeholder="55" /><span class="rm-suf">%</span></div>
+                            </label>
+                            <label class="rm-label sm">
+                                <span><i class="fas fa-exchange-alt"></i> Avg R∶R <i
+                                        class="fas fa-question-circle rm-help"
+                                        data-tip="Average Reward-to-Risk ratio. If you risk $100 and typically gain $200, your R:R is 2.0."></i></span>
+                                <input type="number" id="riskAvgRR" min="0.1" max="20" step="0.1" placeholder="2.0" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ─── Derived Targets ─── -->
+                    <div class="rm-targets">
+                        <div class="rm-pill">
+                            <div class="rm-pill-lbl">Weekly</div>
+                            <div class="rm-pill-val" id="riskWeeklyTarget">$0</div>
+                        </div>
+                        <div class="rm-pill">
+                            <div class="rm-pill-lbl">Daily</div>
+                            <div class="rm-pill-val" id="riskDailyTarget">$0</div>
+                        </div>
+                        <div class="rm-pill">
+                            <div class="rm-pill-lbl">Per Trade</div>
+                            <div class="rm-pill-val" id="riskPerTrade">$0</div>
+                        </div>
+                        <div class="rm-pill rm-pill-dd">
+                            <div class="rm-pill-lbl">Max Daily DD</div>
+                            <div class="rm-pill-val" id="riskMaxDailyDD">-$0</div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Contract Selector ─── -->
+                    <div class="rm-card rm-contract-card">
+                        <h3><i class="fas fa-file-contract"></i> Contract <i class="fas fa-question-circle rm-help"
+                                data-tip="Select the futures contract you trade. The multiplier converts price points to dollars. Tick size is the minimum price movement."></i>
+                        </h3>
+                        <div class="rm-contract-row">
+                            <select id="riskContractSelect"></select>
+                            <div class="rm-chips" id="riskContractInfo"></div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Risk Tiers with graphical breakdown ─── -->
+                    <div class="rm-tiers">
+                        <div class="rm-tier rm-tier-low">
+                            <div class="rm-tier-head"><span class="rm-tier-dot"
+                                    style="background:var(--success-color)"></span><span
+                                    class="rm-tier-name">Conservative</span>
+                                <i class="fas fa-question-circle rm-help"
+                                    data-tip="Low risk per trade. Recommended for new traders or drawdown recovery. Small positions, wide stops."></i>
+                                <div class="rm-tier-pct"><input type="number" id="riskTierLowPct" min="0.1" max="10"
+                                        step="0.1" value="0.5" /><span>%</span></div>
+                            </div>
+                            <div class="rm-tier-body" id="tierLowBody"></div>
+                        </div>
+                        <div class="rm-tier rm-tier-med">
+                            <div class="rm-tier-head"><span class="rm-tier-dot"
+                                    style="background:var(--warning-color)"></span><span
+                                    class="rm-tier-name">Moderate</span>
+                                <i class="fas fa-question-circle rm-help"
+                                    data-tip="Standard risk level for experienced traders with a proven edge. Balanced between growth and preservation."></i>
+                                <div class="rm-tier-pct"><input type="number" id="riskTierMedPct" min="0.1" max="10"
+                                        step="0.1" value="1.0" /><span>%</span></div>
+                            </div>
+                            <div class="rm-tier-body" id="tierMedBody"></div>
+                        </div>
+                        <div class="rm-tier rm-tier-high">
+                            <div class="rm-tier-head"><span class="rm-tier-dot"
+                                    style="background:var(--danger-color)"></span><span
+                                    class="rm-tier-name">Aggressive</span>
+                                <i class="fas fa-question-circle rm-help"
+                                    data-tip="High risk per trade. Only for A+ setups with strong confluence. One bad streak can cause significant drawdown."></i>
+                                <div class="rm-tier-pct"><input type="number" id="riskTierHighPct" min="0.1" max="10"
+                                        step="0.1" value="2.0" /><span>%</span></div>
+                            </div>
+                            <div class="rm-tier-body" id="tierHighBody"></div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Trade Checker ─── -->
+                    <div class="rm-card rm-checker-card">
+                        <div class="rm-checker-head">
+                            <h3><i class="fas fa-crosshairs"></i> Trade Checker</h3>
+                            <p>Enter a trade idea and see how it fits your risk profile.</p>
+                        </div>
+                        <div class="rm-grid rm-grid-3 rm-checker-inputs">
+                            <label class="rm-label">
+                                <span><i class="fas fa-file-contract"></i> Contract</span>
+                                <select id="checkerContract"></select>
+                            </label>
+                            <label class="rm-label">
+                                <span><i class="fas fa-sign-in-alt"></i> Entry Price</span>
+                                <input type="number" id="checkerEntry" step="any" placeholder="5450.25" />
+                            </label>
+                            <label class="rm-label">
+                                <span><i class="fas fa-hand-paper"></i> Stop Price</span>
+                                <input type="number" id="checkerStop" step="any" placeholder="5445.00" />
+                            </label>
+                        </div>
+                        <div class="rm-checker-result" id="checkerResult">
+                            <div class="rm-checker-empty"><i class="fas fa-arrow-up"></i> Enter entry &amp; stop above
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Edge Stats ─── -->
+                    <div class="rm-edge-grid">
+                        <div class="rm-edge">
+                            <div class="rm-edge-icon" style="background:rgba(124,58,237,.1);color:#7c3aed"><i
+                                    class="fas fa-brain"></i></div>
+                            <div class="rm-edge-lbl">Kelly Criterion <i class="fas fa-question-circle rm-help"
+                                    data-tip="The Kelly formula tells you the optimal % of your account to risk per trade based on your win rate and R:R. Formula: K = WinRate − (1 − WinRate) ÷ R:R. Most traders use half or quarter Kelly for safety."></i>
+                            </div>
+                            <div class="rm-edge-val" id="riskKelly">0%</div>
+                            <div class="rm-edge-hint" id="riskKellyNote">Enter win rate &amp; R∶R</div>
+                        </div>
+                        <div class="rm-edge">
+                            <div class="rm-edge-icon"><i class="fas fa-calculator"></i></div>
+                            <div class="rm-edge-lbl">Break-Even WR <i class="fas fa-question-circle rm-help"
+                                    data-tip="The minimum win rate you need to break even given your R:R. Formula: BE = 1 ÷ (1 + R:R). With a 2:1 R:R you only need to win 33.3% of the time."></i>
+                            </div>
+                            <div class="rm-edge-val" id="riskBreakEven">0%</div>
+                            <div class="rm-edge-hint" id="riskBreakEvenNote">Set avg R∶R</div>
+                        </div>
+                        <div class="rm-edge">
+                            <div class="rm-edge-icon" style="background:rgba(5,150,105,.1);color:var(--success-color)">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="rm-edge-lbl">Your Edge <i class="fas fa-question-circle rm-help"
+                                    data-tip="Edge = Win Rate − Break-Even WR. A positive edge means your system is profitable over many trades. The higher the better."></i>
+                            </div>
+                            <div class="rm-edge-val" id="riskEdge">0%</div>
+                            <div class="rm-edge-hint" id="riskEdgeNote">Positive = profitable</div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Ruin ─── -->
+                    <div class="rm-ruin">
+                        <div class="rm-ruin-lbl"><i class="fas fa-skull-crossbones"></i> Risk of Ruin <i
+                                class="fas fa-question-circle rm-help rm-help-light"
+                                data-tip="See explanation below."></i></div>
+                        <div class="rm-ruin-track">
+                            <div class="rm-ruin-fill" id="riskRuinBar"></div>
+                        </div>
+                        <div class="rm-ruin-pct" id="riskRuinValue">0%</div>
+                    </div>
+
+                    <!-- ─── Risk of Ruin Explainer ─── -->
+                    <div class="rm-card rm-explainer">
+                        <div class="rm-explainer-head">
+                            <div class="rm-explainer-icon"><i class="fas fa-book-open"></i></div>
+                            <h3>What is Risk of Ruin?</h3>
+                        </div>
+                        <div class="rm-explainer-body">
+                            <p><strong>Risk of Ruin</strong> is the probability that you will lose your entire trading
+                                account (or hit a drawdown so severe you can't recover) given your current edge and
+                                position sizing.</p>
+                            <div class="rm-explainer-grid">
+                                <div class="rm-explainer-item">
+                                    <div class="rm-explainer-num" style="color:var(--success-color)">
+                                        < 1%</div>
+                                            <div class="rm-explainer-desc">Excellent — your account is very safe. Keep
+                                                doing what you're doing.</div>
+                                    </div>
+                                    <div class="rm-explainer-item">
+                                        <div class="rm-explainer-num" style="color:var(--warning-color)">1 – 10%</div>
+                                        <div class="rm-explainer-desc">Caution — reduce position size or improve your
+                                            win rate / R:R.</div>
+                                    </div>
+                                    <div class="rm-explainer-item">
+                                        <div class="rm-explainer-num" style="color:var(--danger-color)">> 10%</div>
+                                        <div class="rm-explainer-desc">Danger — you're likely to blow up. Lower risk per
+                                            trade immediately.</div>
+                                    </div>
+                                </div>
+                                <p class="rm-explainer-formula">Formula: RoR = ((1 − Edge) ÷ (1 + Edge)) ^ (Account ÷
+                                    Risk per trade)</p>
+                                <p class="rm-explainer-tip"><i class="fas fa-lightbulb"></i> The two biggest levers to
+                                    reduce ruin are: <strong>1)</strong> smaller position sizes, and <strong>2)</strong>
+                                    improving your edge (higher win rate or better R:R).</p>
+                            </div>
+                        </div>
+
+                </section>
+
                 <!-- Export Section -->
                 <section class="export-section tab-content" id="exportSection" style="display: none;">
                     <div class="export-container">
@@ -746,6 +983,77 @@
                                     <i class="fas fa-hourglass-half"></i>
                                     Coming Soon
                                 </button>
+                            </div>
+                        </div>
+
+                        <hr
+                            style="border: none; border-top: 1px solid var(--border-light); margin: var(--spacing-6) 0;">
+
+                        <!-- Upload History -->
+                        <div class="backup-section" style="margin-bottom: var(--spacing-8);">
+                            <h3 style="margin-bottom: var(--spacing-4); color: var(--text-primary);">
+                                <i class="fas fa-history" style="color: var(--primary-color);"></i> Upload History
+                            </h3>
+                            <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
+                                A log of every CSV file you've imported into the app.
+                            </p>
+
+                            <!-- Empty state -->
+                            <div id="uploadHistoryEmpty" class="uh-empty">
+                                <i class="fas fa-inbox"></i>
+                                <p>No uploads yet. Import a CSV from the <strong>Import Data</strong> tab to get
+                                    started.</p>
+                            </div>
+
+                            <!-- Table (hidden until there's data) -->
+                            <div id="uploadHistoryTableWrap" class="uh-table-wrap" style="display:none;">
+                                <table class="uh-table">
+                                    <thead>
+                                        <tr>
+                                            <th>File</th>
+                                            <th>Format</th>
+                                            <th>Date</th>
+                                            <th style="text-align:center">New</th>
+                                            <th style="text-align:center">Dupes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="uploadHistoryBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr
+                            style="border: none; border-top: 1px solid var(--border-light); margin: var(--spacing-6) 0;">
+
+                        <!-- Danger Zone -->
+                        <div class="danger-zone">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
+                            <p>Irreversible actions — proceed with caution.</p>
+                            <div class="danger-zone-cards">
+                                <div class="danger-card">
+                                    <div class="danger-card-body">
+                                        <div>
+                                            <h4>Clear Trade Database</h4>
+                                            <p>Removes all imported trades and Order IDs. Journal notes and screenshots
+                                                are kept.</p>
+                                        </div>
+                                        <button class="btn btn-danger-outline" id="clearDatabaseBtn">
+                                            <i class="fas fa-eraser"></i> Clear Trades
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="danger-card danger-card--nuke">
+                                    <div class="danger-card-body">
+                                        <div>
+                                            <h4>Full Reset — Delete Everything</h4>
+                                            <p>Wipes trades, journals, screenshots, risk settings, upload history —
+                                                everything. You'll start completely fresh.</p>
+                                        </div>
+                                        <button class="btn btn-danger" id="resetAllBtn">
+                                            <i class="fas fa-skull-crossbones"></i> Reset Everything
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

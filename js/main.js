@@ -194,6 +194,20 @@ class TradleApp {
             });
         }
 
+        // Bind full reset button
+        const resetAllBtn = document.getElementById('resetAllBtn');
+        if (resetAllBtn) {
+            resetAllBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.resetEverything();
+            });
+        }
+
+        // Render upload history on load
+        if (typeof this.uiController.renderUploadHistory === 'function') {
+            this.uiController.renderUploadHistory(this.getUploadHistory());
+        }
+
     }
 
     /**
@@ -405,6 +419,13 @@ class TradleApp {
                         console.warn('⚠️ Firebase CSV sync failed:', result.message);
                     }
                 });
+            }
+
+            // Step 9b: Log this upload to upload history
+            this.logUploadHistory(file.name, format, deduplicationResult.newTrades, deduplicationResult.duplicates);
+            // Refresh history UI if visible
+            if (typeof this.uiController.renderUploadHistory === 'function') {
+                this.uiController.renderUploadHistory(this.getUploadHistory());
             }
 
             // Step 10: No page reload needed — dashboard is already showing the new data
@@ -922,6 +943,37 @@ class TradleApp {
     }
 
     /**
+     * Log a successful CSV upload to the upload history
+     */
+    logUploadHistory(filename, format, newTrades, duplicates) {
+        try {
+            const history = JSON.parse(localStorage.getItem('tradle_upload_history') || '[]');
+            history.push({
+                filename,
+                format: format === 'ibkr' ? 'IBKR' : 'TradingView',
+                date: new Date().toISOString(),
+                newTrades,
+                duplicates
+            });
+            localStorage.setItem('tradle_upload_history', JSON.stringify(history));
+            console.log(`📜 Upload history logged: ${filename}`);
+        } catch (e) {
+            console.warn('⚠️ Failed to log upload history:', e);
+        }
+    }
+
+    /**
+     * Get the upload history array
+     */
+    getUploadHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('tradle_upload_history') || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * Clear all trade database data
      */
     clearTradeDatabase() {
@@ -937,6 +989,90 @@ class TradleApp {
         this.uiController.hideDashboard();
         this.uiController.showToast('All trade data cleared successfully!', 'info');
         console.log('🗑️ Trade database cleared');
+    }
+
+    /**
+     * Nuclear reset: clear EVERYTHING — trades, journals, screenshots, risk settings, upload history
+     */
+    async resetEverything() {
+        // Double-confirm
+        const pass1 = confirm(
+            '⚠️ FULL RESET\n\n' +
+            'This will permanently delete ALL your data:\n' +
+            '• All trades\n' +
+            '• All journal notes\n' +
+            '• All screenshots\n' +
+            '• Upload history\n' +
+            '• Risk settings\n\n' +
+            'This action CANNOT be undone.\n\nContinue?'
+        );
+        if (!pass1) return;
+
+        const pass2 = confirm(
+            '🚨 FINAL CONFIRMATION\n\n' +
+            'Are you ABSOLUTELY sure?\n' +
+            'Type OK to wipe everything.'
+        );
+        if (!pass2) return;
+
+        console.log('🗑️ Full reset initiated by user');
+
+        // 1. Clear trade database
+        this.tradeDatabase = { trades: [], orderIds: new Set(), lastUpdated: null };
+        localStorage.removeItem('tradle_trade_database');
+        this.currentData = null;
+        localStorage.removeItem('tradle_current_data');
+
+        // 2. Clear all journal entries
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('tradle_journal_')) keysToRemove.push(key);
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        console.log(`🗑️ Cleared ${keysToRemove.length} journal entries`);
+
+        // 3. Clear upload history
+        localStorage.removeItem('tradle_upload_history');
+
+        // 4. Clear risk settings
+        localStorage.removeItem('tradle_riskContract');
+        localStorage.removeItem('tradle_riskMonthlyGoal');
+        localStorage.removeItem('tradle_riskYearlyGoal');
+
+        // 5. Clear daily goal
+        localStorage.removeItem('tradle_daily_goal');
+
+        // 6. Clear misc flags
+        localStorage.removeItem('tradle_upload_success');
+
+        // 7. Clear screenshots from IndexedDB
+        try {
+            if (typeof ImageStore !== 'undefined') {
+                const db = await ImageStore._getDB();
+                const tx = db.transaction('screenshots', 'readwrite');
+                const store = tx.objectStore('screenshots');
+                store.clear();
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error);
+                });
+                console.log('🗑️ Cleared all screenshots from IndexedDB');
+            }
+        } catch (e) {
+            console.warn('⚠️ Could not clear screenshots:', e);
+        }
+
+        // 8. Update UI
+        this.uiController.hideDashboard();
+        this.uiController.showToast('All data has been wiped. Starting fresh!', 'success');
+
+        // 9. Refresh the upload history UI
+        if (typeof this.uiController.renderUploadHistory === 'function') {
+            this.uiController.renderUploadHistory([]);
+        }
+
+        console.log('✅ Full reset completed');
     }
 
     /**
@@ -1100,14 +1236,15 @@ class TradleApp {
 
             // Build backup object
             const backup = {
-                version: '2.0',
+                version: '2.1',
                 exportedAt: new Date().toISOString(),
                 browser: navigator.userAgent,
                 data: {
                     tradeDatabase: tradeDB,
                     journals: journals,
                     dailyGoal: dailyGoal,
-                    screenshots: screenshots
+                    screenshots: screenshots,
+                    uploadHistory: localStorage.getItem('tradle_upload_history')
                 }
             };
 
@@ -1189,7 +1326,13 @@ class TradleApp {
                 }
             }
 
-            // 5. Reload the app to pick up restored data
+            // 5. Restore upload history
+            if (backup.data.uploadHistory) {
+                localStorage.setItem('tradle_upload_history', backup.data.uploadHistory);
+                console.log('✅ Upload history restored');
+            }
+
+            // 6. Reload the app to pick up restored data
             this.loadTradeDatabase();
 
             if (this.tradeDatabase.trades.length > 0) {
@@ -1198,6 +1341,11 @@ class TradleApp {
             }
 
             this.uiController.hideLoading();
+
+            // Refresh upload history UI
+            if (typeof this.uiController.renderUploadHistory === 'function') {
+                this.uiController.renderUploadHistory(this.getUploadHistory());
+            }
 
             const screenshotCount = backup.data.screenshots ? backup.data.screenshots.length : 0;
             const journalCount = backup.data.journals ? Object.keys(backup.data.journals).length : 0;
