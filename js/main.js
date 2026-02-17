@@ -96,6 +96,11 @@ class TradleApp {
         } else {
             this.uiController.showToast('Welcome to Tradle! Upload your TradingView CSV to update your data.', 'info');
         }
+
+        // Re-render import history now that auto-load is done
+        if (typeof this.uiController.renderUploadHistory === 'function') {
+            this.uiController.renderUploadHistory(this.getUploadHistory());
+        }
     }
 
     /**
@@ -151,9 +156,13 @@ class TradleApp {
                 const dedup = this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
                 anyLoaded = true;
 
-                // Log to upload history so it appears in Import History
+                // Log to import history ONLY if this file hasn't been logged yet
                 const sampleName = sample.path.split('/').pop();
-                this.logUploadHistory(sampleName, sample.format, dedup.newTrades, dedup.duplicates);
+                const existingHistory = this.getUploadHistory();
+                const alreadyLogged = existingHistory.some(h => h.filename === sampleName);
+                if (!alreadyLogged) {
+                    this.logUploadHistory(sampleName, sample.format, dedup.newTrades, dedup.duplicates);
+                }
 
                 console.log(`✅ Auto-loaded ${tradeResult.trades.length} trades from ${sample.path}`);
 
