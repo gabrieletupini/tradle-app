@@ -2373,16 +2373,32 @@ body {
 }
 
 .export-card .card-icon {
-    width: 60px;
-    height: 60px;
+    width: 56px;
+    height: 56px;
     margin: 0 auto var(--spacing-4);
-    background: var(--primary-color);
     border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-inverse);
-    font-size: var(--font-size-xl);
+    font-size: 1.45rem;
+}
+
+/* CSV Export – green */
+.export-card--csv .card-icon {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+/* Performance Report – indigo */
+.export-card--report .card-icon {
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+}
+
+/* PDF Summary – amber */
+.export-card--pdf .card-icon {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
 }
 
 .export-card h3 {
