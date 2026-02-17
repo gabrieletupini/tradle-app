@@ -115,11 +115,18 @@ class TradleApp {
             { path: 'data/sample-data/ibkr-trade-report-2026-02-12.csv', format: 'ibkr' }
         ];
 
-        // Migration: clean up old sample-file history entries from before the rename
+        // Migration: clean up stale sample-file history entries
+        // (old names from before rename, and entries with 0 new trades from first deploy)
         try {
             const oldNames = ['sample-tradingview-data.csv', 'sample-ibkr-data.csv'];
+            const currentSampleNames = sampleFiles.map(s => s.path.split('/').pop());
             let hist = this.getUploadHistory();
-            const cleaned = hist.filter(h => !oldNames.includes(h.filename));
+            const cleaned = hist.filter(h => {
+                if (oldNames.includes(h.filename)) return false;
+                // Remove sample entries that logged 0 new (stale from before fix)
+                if (currentSampleNames.includes(h.filename) && h.newTrades === 0) return false;
+                return true;
+            });
             if (cleaned.length !== hist.length) {
                 localStorage.setItem('tradle_upload_history', JSON.stringify(cleaned));
             }
@@ -171,7 +178,12 @@ class TradleApp {
                 const existingHistory = this.getUploadHistory();
                 const alreadyLogged = existingHistory.some(h => h.filename === sampleName);
                 if (!alreadyLogged) {
-                    this.logUploadHistory(sampleName, sample.format, dedup.newTrades, dedup.duplicates);
+                    // For first-time logging of sample CSVs, the trades are likely
+                    // already in the DB from before we had history tracking, so dedup
+                    // would show 0 new. Use total trade count as "new" instead.
+                    const totalTrades = tradeResult.trades.length;
+                    const actualNew = dedup.newTrades > 0 ? dedup.newTrades : totalTrades;
+                    this.logUploadHistory(sampleName, sample.format, actualNew, 0);
                 }
 
                 console.log(`✅ Auto-loaded ${tradeResult.trades.length} trades from ${sample.path}`);
