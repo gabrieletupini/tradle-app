@@ -3332,10 +3332,17 @@ body {
     min-height: 75px;
 }
 
-.journal-screenshot-add:hover {
+.journal-screenshot-add:hover,
+.journal-screenshot-add:focus-visible {
     border-color: var(--primary-color);
     color: var(--primary-color);
     background: rgba(99, 102, 241, 0.04);
+    outline: none;
+}
+
+.journal-screenshot-grid.drag-over {
+    background: rgba(99, 102, 241, 0.06);
+    border-radius: var(--radius-sm);
 }
 
 .journal-screenshot-add .add-label {

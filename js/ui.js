@@ -1159,9 +1159,9 @@ class UIController {
                                     <button class="screenshot-remove" data-img-id="${s.id}" data-trade-id="${tradeId}" data-index="${si}" title="Remove">&times;</button>
                                 </div>
                             `).join('')}
-                            <div class="journal-screenshot-add" data-trade-id="${tradeId}" data-day-key="${dayKey}">
+                            <div class="journal-screenshot-add" data-trade-id="${tradeId}" data-day-key="${dayKey}" tabindex="0">
                                 <i class="fas fa-plus"></i>
-                                <span class="add-label">Add</span>
+                                <span class="add-label">Add or ⌘V</span>
                             </div>
                         </div>
                     </div>
@@ -1222,9 +1222,60 @@ class UIController {
             ta.oninput = debouncedSave;
         });
 
-        // Screenshot add buttons
+        // Screenshot add buttons (click to upload)
         document.querySelectorAll('.journal-screenshot-add').forEach(btn => {
             btn.onclick = () => this._handleScreenshotAdd(btn.dataset.tradeId, dayKey, trades);
+
+            // Paste on focused add-button → goes to that specific trade
+            btn.addEventListener('paste', (e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                const tradeId = btn.dataset.tradeId;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.startsWith('image/')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = items[i].getAsFile();
+                        this._readImageFile(file, async (dataUrl) => {
+                            const imgId = await ImageStore.save(dayKey, tradeId, dataUrl);
+                            this._addScreenshotToGrid(tradeId, dataUrl, imgId);
+                            this._setJournalSaveStatus(true);
+                            if (typeof FirebaseSync !== 'undefined') {
+                                FirebaseSync.pushScreenshot({ id: imgId, dayKey, tradeId, dataUrl });
+                                FirebaseSync.scheduleJournalSync();
+                            }
+                        });
+                    }
+                }
+            });
+        });
+
+        // Drag & drop on screenshot grids
+        document.querySelectorAll('.journal-screenshot-grid').forEach(grid => {
+            const tradeId = grid.dataset.tradeId;
+            grid.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                grid.classList.add('drag-over');
+            });
+            grid.addEventListener('dragleave', () => grid.classList.remove('drag-over'));
+            grid.addEventListener('drop', (e) => {
+                e.preventDefault();
+                grid.classList.remove('drag-over');
+                const files = e.dataTransfer?.files;
+                if (!files) return;
+                Array.from(files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+                    this._readImageFile(file, async (dataUrl) => {
+                        const imgId = await ImageStore.save(dayKey, tradeId, dataUrl);
+                        this._addScreenshotToGrid(tradeId, dataUrl, imgId);
+                        this._setJournalSaveStatus(true);
+                        if (typeof FirebaseSync !== 'undefined') {
+                            FirebaseSync.pushScreenshot({ id: imgId, dayKey, tradeId, dataUrl });
+                            FirebaseSync.scheduleJournalSync();
+                        }
+                    });
+                });
+            });
         });
 
         // Screenshot remove buttons
@@ -1308,12 +1359,21 @@ class UIController {
         const items = e.clipboardData?.items;
         if (!items) return;
 
-        // Find which trade entry is focused (or default to first)
-        const focused = document.activeElement;
+        // Find which trade entry is focused — walk up from activeElement
         let targetTradeId = null;
-        if (focused && focused.dataset.tradeId) {
-            targetTradeId = focused.dataset.tradeId;
-        } else {
+        const focused = document.activeElement;
+        if (focused) {
+            // Check the element itself
+            if (focused.dataset.tradeId) {
+                targetTradeId = focused.dataset.tradeId;
+            } else {
+                // Walk up to find parent trade entry
+                const entry = focused.closest('.journal-trade-entry');
+                if (entry) targetTradeId = entry.dataset.tradeId;
+            }
+        }
+        // Fall back to first trade
+        if (!targetTradeId) {
             const firstEntry = document.querySelector('.journal-trade-entry');
             if (firstEntry) targetTradeId = firstEntry.dataset.tradeId;
         }
