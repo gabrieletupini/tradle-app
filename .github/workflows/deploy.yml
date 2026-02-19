@@ -109,6 +109,10 @@ jobs:
             npx terser dist/js/tradeCalculator.js --compress --mangle --output dist/js/tradeCalculator.min.js
             mv dist/js/tradeCalculator.min.js dist/js/tradeCalculator.js
           fi
+          if [ -f dist/js/firebaseSync.js ]; then
+            npx terser dist/js/firebaseSync.js --compress --mangle --output dist/js/firebaseSync.min.js
+            mv dist/js/firebaseSync.min.js dist/js/firebaseSync.js
+          fi
 
       - name: Create robots.txt
         run: |

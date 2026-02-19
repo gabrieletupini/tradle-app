@@ -50,18 +50,24 @@ class TradleApp {
             console.warn('⚠️ ImageStore init error (screenshots may not work):', e);
         }
 
-        // Pull journal + screenshots from Firebase (cross-device sync)
+        // Pull journal + screenshots + trade database from Firebase (cross-device sync)
         try {
             if (typeof FirebaseSync !== 'undefined') {
-                const [journalResult, screenshotResult] = await Promise.all([
+                FirebaseSync._setSyncStatus('connecting');
+
+                const [journalResult, screenshotResult, tradeResult] = await Promise.all([
                     FirebaseSync.pullJournal(),
-                    FirebaseSync.pullScreenshots()
+                    FirebaseSync.pullScreenshots(),
+                    FirebaseSync.pullTradeDatabase()
                 ]);
                 if (journalResult.success && journalResult.merged > 0) {
                     console.log(`📥 Merged ${journalResult.merged} journal days from Firebase`);
                 }
                 if (screenshotResult.success && screenshotResult.merged > 0) {
                     console.log(`📥 Merged ${screenshotResult.merged} screenshots from Firebase`);
+                }
+                if (tradeResult.success && tradeResult.merged > 0) {
+                    console.log(`📥 Merged ${tradeResult.merged} trades from Firebase`);
                 }
 
                 // Push local data to Firebase (ensures existing cached data syncs up)
@@ -70,6 +76,7 @@ class TradleApp {
             }
         } catch (e) {
             console.warn('⚠️ Firebase sync error:', e);
+            if (typeof FirebaseSync !== 'undefined') FirebaseSync._setSyncStatus('error', e.message);
         }
 
         // Load persistent trade database
@@ -805,6 +812,11 @@ class TradleApp {
                 console.log('💾 ✅ localStorage verification successful');
             } else {
                 console.error('❌ localStorage save verification FAILED');
+            }
+
+            // Sync trade database to Firebase (fire-and-forget)
+            if (typeof FirebaseSync !== 'undefined') {
+                FirebaseSync.pushTradeDatabase();
             }
 
         } catch (error) {

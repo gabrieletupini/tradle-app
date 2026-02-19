@@ -54,6 +54,10 @@
                         <i class="fas fa-chart-line"></i>
                         <h1>Tradle</h1>
                         <span class="tagline">Trading Journal</span>
+                        <div class="sync-indicator" id="firebaseSyncIndicator">
+                            <div class="sync-dot sync-pulse" id="firebaseSyncDot"></div>
+                            <div class="sync-tooltip" id="firebaseSyncTooltip">Connecting to cloud...</div>
+                        </div>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-outline" id="darkModeToggle">
@@ -962,11 +966,11 @@
                                 <i class="fas fa-sync-alt" style="color: var(--primary-color);"></i> Cross-Device Sync
                             </h3>
                             <p style="color: var(--text-secondary); margin-bottom: var(--spacing-4);">
-                                Your journal notes, screenshots, and uploaded CSVs sync automatically across all devices
-                                via Firebase.
+                                Your journal notes, screenshots, trades, and uploaded CSVs sync automatically across all
+                                devices via Firebase.
                                 No setup needed — just use the app.
                             </p>
-                            <div id="firebaseSyncStatus" style="font-size: 0.85rem; color: var(--success-color);">
+                            <div id="firebaseSyncStatusExport" style="font-size: 0.85rem; color: var(--success-color);">
                                 <i class="fas fa-check-circle"></i> Sync active — data is shared across all your devices
                             </div>
                         </div>
@@ -1146,7 +1150,7 @@
 
     <!-- Scripts -->
     <script src="js/imageStore.js?v=13"></script>
-    <script src="js/firebaseSync.js?v=13"></script>
+    <script src="js/firebaseSync.js?v=14"></script>
     <script src="js/csvParser.js?v=13"></script>
     <script src="js/tradeCalculator.js?v=13"></script>
     <script src="js/ui.js?v=13"></script>

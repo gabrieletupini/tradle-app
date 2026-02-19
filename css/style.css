@@ -155,6 +155,72 @@ body {
     border-radius: var(--radius-sm);
 }
 
+/* Firebase Sync Indicator */
+.sync-indicator {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: help;
+}
+
+.sync-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #f59e0b;
+    /* amber = connecting */
+    transition: background 0.3s ease;
+}
+
+.sync-dot.sync-pulse {
+    animation: syncPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.sync-tooltip {
+    display: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: calc(100% + 8px);
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: var(--shadow-lg);
+    pointer-events: none;
+}
+
+.sync-tooltip::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    top: -3px;
+    width: 6px;
+    height: 6px;
+    background: var(--text-primary);
+}
+
+.sync-indicator:hover .sync-tooltip {
+    display: block;
+}
+
 .header-actions {
     display: flex;
     align-items: center;
