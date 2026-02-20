@@ -761,6 +761,26 @@ class TradleApp {
                         }
                     });
 
+                    // Deduplicate by fingerprint (fixes cross-browser sync duplication)
+                    const seen = new Set();
+                    const before = this.tradeDatabase.trades.length;
+                    this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
+                        const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
+                        const eTime = t.entryTime ? new Date(t.entryTime).getTime() : 0;
+                        const xTime = t.exitTime ? new Date(t.exitTime).getTime() : 0;
+                        const ePrice = Math.round((t.entryPrice || 0) * 100);
+                        const xPrice = Math.round((t.exitPrice || 0) * 100);
+                        const fp = `${sym}_${eTime}_${xTime}_${ePrice}_${xPrice}`;
+                        if (seen.has(fp)) return false;
+                        seen.add(fp);
+                        return true;
+                    });
+                    if (this.tradeDatabase.trades.length < before) {
+                        console.log(`🧹 Removed ${before - this.tradeDatabase.trades.length} duplicate trades from database`);
+                        // Persist the cleaned database
+                        this.saveTradeDatabase();
+                    }
+
                     console.log('🔍 DEBUG: Sample trade:', this.tradeDatabase.trades[0]);
                     return true;
                 } else {

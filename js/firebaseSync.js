@@ -289,6 +289,7 @@ class FirebaseSync {
 
     /**
      * Push the entire trade database to Firebase.
+     * Deduplicates local trades before pushing.
      */
     static async pushTradeDatabase() {
         try {
@@ -296,8 +297,34 @@ class FirebaseSync {
             if (!raw) return { success: false, message: 'No trade database' };
 
             const db = JSON.parse(raw);
+            let trades = db.trades || [];
+
+            // Deduplicate by fingerprint before pushing
+            const seen = new Set();
+            const fingerprint = (t) => {
+                const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
+                const eTime = t.entryTime ? new Date(t.entryTime).getTime() : 0;
+                const xTime = t.exitTime ? new Date(t.exitTime).getTime() : 0;
+                const ePrice = Math.round((t.entryPrice || 0) * 100);
+                const xPrice = Math.round((t.exitPrice || 0) * 100);
+                return `${sym}_${eTime}_${xTime}_${ePrice}_${xPrice}`;
+            };
+            const before = trades.length;
+            trades = trades.filter(t => {
+                const fp = fingerprint(t);
+                if (seen.has(fp)) return false;
+                seen.add(fp);
+                return true;
+            });
+            if (trades.length < before) {
+                console.log(`🧹 FirebaseSync: Removed ${before - trades.length} duplicate trades before push`);
+                // Also clean local storage
+                db.trades = trades;
+                localStorage.setItem('tradle_trade_database', JSON.stringify(db));
+            }
+
             const payload = {
-                trades: db.trades || [],
+                trades: trades,
                 lastUpdated: new Date().toISOString()
             };
 
@@ -308,7 +335,7 @@ class FirebaseSync {
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-            console.log(`✅ FirebaseSync: Trade database pushed (${(db.trades || []).length} trades)`);
+            console.log(`✅ FirebaseSync: Trade database pushed (${trades.length} trades)`);
             this._setSyncStatus('synced');
             return { success: true };
         } catch (e) {
@@ -320,7 +347,7 @@ class FirebaseSync {
 
     /**
      * Pull the trade database from Firebase and merge into localStorage.
-     * Remote trades with IDs not in local DB are added.
+     * Deduplicates by order IDs AND by trade fingerprint (symbol + times + prices).
      */
     static async pullTradeDatabase() {
         try {
@@ -339,7 +366,8 @@ class FirebaseSync {
 
             // Build set of local trade IDs for fast lookup
             const localIds = new Set(localTrades.map(t => t.id).filter(Boolean));
-            // Also build set of all local order IDs
+
+            // Build set of all local order IDs
             const localOrderIds = new Set();
             localTrades.forEach(t => {
                 if (t.entryOrderId) localOrderIds.add(t.entryOrderId);
@@ -347,17 +375,34 @@ class FirebaseSync {
                 if (t.allOrderIds) t.allOrderIds.forEach(oid => { if (oid) localOrderIds.add(oid); });
             });
 
+            // Build fingerprint set for content-based dedup
+            // (catches duplicates where IDs differ but the trade is the same)
+            const fingerprint = (t) => {
+                const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
+                const eTime = t.entryTime ? new Date(t.entryTime).getTime() : 0;
+                const xTime = t.exitTime ? new Date(t.exitTime).getTime() : 0;
+                const ePrice = Math.round((t.entryPrice || 0) * 100);
+                const xPrice = Math.round((t.exitPrice || 0) * 100);
+                return `${sym}_${eTime}_${xTime}_${ePrice}_${xPrice}`;
+            };
+            const localFingerprints = new Set(localTrades.map(fingerprint));
+
             let merged = 0;
             for (const trade of remote.trades) {
                 // Skip if trade ID already in local
                 if (trade.id && localIds.has(trade.id)) continue;
 
-                // Skip if any order ID already tracked (dedup by order)
+                // Skip if any order ID already tracked
                 const tradeOrderIds = [trade.entryOrderId, trade.exitOrderId, ...(trade.allOrderIds || [])].filter(Boolean);
                 if (tradeOrderIds.length > 0 && tradeOrderIds.some(oid => localOrderIds.has(oid))) continue;
 
+                // Skip if fingerprint matches an existing local trade
+                const fp = fingerprint(trade);
+                if (localFingerprints.has(fp)) continue;
+
                 localTrades.push(trade);
                 localIds.add(trade.id);
+                localFingerprints.add(fp);
                 tradeOrderIds.forEach(oid => localOrderIds.add(oid));
                 merged++;
             }
@@ -395,10 +440,10 @@ class FirebaseSync {
         if (!dot) return;
 
         const configs = {
-            connecting: { color: '#f59e0b', pulse: true,  label: 'Connecting to cloud...' },
-            synced:     { color: '#10b981', pulse: false, label: 'Synced — data saved to cloud' },
-            error:      { color: '#ef4444', pulse: true,  label: this._syncError ? `Sync error: ${this._syncError}` : 'Sync error — data only saved locally' },
-            offline:    { color: '#94a3b8', pulse: false, label: 'Offline — data saved locally' }
+            connecting: { color: '#f59e0b', pulse: true, label: 'Connecting to cloud...' },
+            synced: { color: '#10b981', pulse: false, label: 'Synced — data saved to cloud' },
+            error: { color: '#ef4444', pulse: true, label: this._syncError ? `Sync error: ${this._syncError}` : 'Sync error — data only saved locally' },
+            offline: { color: '#94a3b8', pulse: false, label: 'Offline — data saved locally' }
         };
 
         const cfg = configs[this._syncStatus] || configs.offline;
