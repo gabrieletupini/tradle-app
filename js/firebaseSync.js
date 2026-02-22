@@ -303,11 +303,11 @@ class FirebaseSync {
             const seen = new Set();
             const fingerprint = (t) => {
                 const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
-                const eTime = t.entryTime ? new Date(t.entryTime).getTime() : 0;
-                const xTime = t.exitTime ? new Date(t.exitTime).getTime() : 0;
                 const ePrice = Math.round((t.entryPrice || 0) * 100);
                 const xPrice = Math.round((t.exitPrice || 0) * 100);
-                return `${sym}_${eTime}_${xTime}_${ePrice}_${xPrice}`;
+                const qty = t.quantity || 1;
+                const side = (t.side || 'LONG').toUpperCase();
+                return `${sym}_${ePrice}_${xPrice}_${qty}_${side}`;
             };
             const before = trades.length;
             trades = trades.filter(t => {
@@ -347,7 +347,7 @@ class FirebaseSync {
 
     /**
      * Pull the trade database from Firebase and merge into localStorage.
-     * Deduplicates by order IDs AND by trade fingerprint (symbol + times + prices).
+     * Deduplicates by order IDs AND by trade fingerprint (symbol + prices + qty + side).
      */
     static async pullTradeDatabase() {
         try {
@@ -377,13 +377,14 @@ class FirebaseSync {
 
             // Build fingerprint set for content-based dedup
             // (catches duplicates where IDs differ but the trade is the same)
+            // Uses prices+qty+side only — timestamps differ across browser timezones
             const fingerprint = (t) => {
                 const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
-                const eTime = t.entryTime ? new Date(t.entryTime).getTime() : 0;
-                const xTime = t.exitTime ? new Date(t.exitTime).getTime() : 0;
                 const ePrice = Math.round((t.entryPrice || 0) * 100);
                 const xPrice = Math.round((t.exitPrice || 0) * 100);
-                return `${sym}_${eTime}_${xTime}_${ePrice}_${xPrice}`;
+                const qty = t.quantity || 1;
+                const side = (t.side || 'LONG').toUpperCase();
+                return `${sym}_${ePrice}_${xPrice}_${qty}_${side}`;
             };
             const localFingerprints = new Set(localTrades.map(fingerprint));
 

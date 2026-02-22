@@ -766,11 +766,11 @@ class TradleApp {
                     const before = this.tradeDatabase.trades.length;
                     this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
                         const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
-                        const eTime = t.entryTime ? new Date(t.entryTime).getTime() : 0;
-                        const xTime = t.exitTime ? new Date(t.exitTime).getTime() : 0;
                         const ePrice = Math.round((t.entryPrice || 0) * 100);
                         const xPrice = Math.round((t.exitPrice || 0) * 100);
-                        const fp = `${sym}_${eTime}_${xTime}_${ePrice}_${xPrice}`;
+                        const qty = t.quantity || 1;
+                        const side = (t.side || 'LONG').toUpperCase();
+                        const fp = `${sym}_${ePrice}_${xPrice}_${qty}_${side}`;
                         if (seen.has(fp)) return false;
                         seen.add(fp);
                         return true;
