@@ -249,19 +249,20 @@ class TradeCalculator {
             : exitPrice - entryPrice;
         const grossProfit = pointDifference * quantity * specs.multiplier;
 
-        // Commission: if the CSV supplied per-order values, use those (scaled for partial fills).
-        // A blank CSV commission means paper trading with $0 commission.
-        // Fall back to the spec-based rate only when there is no CSV commission field at all.
+        // Commission: use CSV per-order values only when at least one order has a non-zero value.
+        // Blank CSV commission (paper trading) falls back to spec-based rate.
         let totalCommission;
         const entryOrder = trade.entryOrder;
         const exitOrder  = trade.exitOrder;
-        if (entryOrder && entryOrder.commission !== undefined && entryOrder.commission !== null) {
+        const entryCommNum = parseFloat(entryOrder?.commission) || 0;
+        const exitCommNum  = parseFloat(exitOrder?.commission)  || 0;
+        if (entryOrder && entryOrder.commission !== undefined && (entryCommNum > 0 || exitCommNum > 0)) {
+            // Non-zero CSV commission — use per-order values scaled for partial fills
             const origEntryQty = entryOrder.originalQty || quantity;
-            const origExitQty  = exitOrder  ? (exitOrder.originalQty  || quantity) : quantity;
-            const entryComm = (parseFloat(entryOrder.commission) || 0) * (quantity / origEntryQty);
-            const exitComm  = (parseFloat(exitOrder?.commission)  || 0) * (quantity / origExitQty);
-            totalCommission = entryComm + exitComm;
+            const origExitQty  = exitOrder ? (exitOrder.originalQty || quantity) : quantity;
+            totalCommission = entryCommNum * (quantity / origEntryQty) + exitCommNum * (quantity / origExitQty);
         } else {
+            // Blank/zero commission in CSV → fall back to spec (paper trading)
             totalCommission = specs.commission * quantity * 2;
         }
         const netProfit = grossProfit - totalCommission;
