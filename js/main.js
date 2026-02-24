@@ -773,6 +773,25 @@ class TradleApp {
                         this.saveTradeDatabase();
                     }
 
+                    // Migration: remove Feb-24-2026 trades calculated by the old algorithm
+                    // (old matchTrades produced wrong pairs/commissions; re-upload the CSV to get correct results)
+                    const beforeFeb24 = this.tradeDatabase.trades.length;
+                    this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
+                        const tradeDate = (t.date || t.boughtDate || '').slice(0, 10);
+                        return tradeDate !== '2026-02-24';
+                    });
+                    if (this.tradeDatabase.trades.length < beforeFeb24) {
+                        console.log(`🧹 Removed ${beforeFeb24 - this.tradeDatabase.trades.length} stale Feb-24 trades (old algorithm) — please re-upload the CSV`);
+                        // Rebuild orderIds so those IDs are freed for immediate re-import
+                        this.tradeDatabase.orderIds = new Set();
+                        this.tradeDatabase.trades.forEach(trade => {
+                            if (trade.entryOrderId) this.tradeDatabase.orderIds.add(trade.entryOrderId);
+                            if (trade.exitOrderId) this.tradeDatabase.orderIds.add(trade.exitOrderId);
+                            if (trade.allOrderIds) trade.allOrderIds.forEach(id => id && this.tradeDatabase.orderIds.add(id));
+                        });
+                        this.saveTradeDatabase();
+                    }
+
                     // Deduplicate by fingerprint (fixes cross-browser sync duplication)
                     const seen = new Set();
                     const before = this.tradeDatabase.trades.length;
