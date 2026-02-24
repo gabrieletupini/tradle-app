@@ -122,17 +122,14 @@ class TradleApp {
             { path: 'data/sample-data/ibkr-trade-report-2026-02-12.csv', format: 'ibkr' }
         ];
 
-        // Migration: ALWAYS remove stale sample-file history entries so they get re-logged with correct counts
-        try {
-            const oldNames = ['sample-tradingview-data.csv', 'sample-ibkr-data.csv'];
-            const currentSampleNames = sampleFiles.map(s => s.path.split('/').pop());
-            const allSampleNames = [...oldNames, ...currentSampleNames];
-            let hist = this.getUploadHistory();
-            const cleaned = hist.filter(h => !allSampleNames.includes(h.filename));
-            if (cleaned.length !== hist.length) {
-                localStorage.setItem('tradle_upload_history', JSON.stringify(cleaned));
-            }
-        } catch (_) { /* ignore */ }
+        // Only import sample data when the database is empty.
+        // Running this on every startup with pair-key dedup would re-parse sample CSVs and
+        // create FIFO pairings that differ from what is already stored, bypassing dedup and
+        // multiplying trades on every load. When called from clearTradeDatabase() the DB is
+        // already empty so this guard doesn't prevent the intended reload.
+        if (this.tradeDatabase.trades.length > 0) {
+            return false;
+        }
 
         let anyLoaded = false;
 
@@ -797,6 +794,29 @@ class TradleApp {
                             }
                         });
                         this.saveTradeDatabase();
+                    }
+
+                    // One-time cleanup (v16): remove all pre-Feb-24 sample-data trades that were
+                    // duplicated by the pair-key dedup change. After removal the DB will be empty,
+                    // causing autoLoadDefaultCSV to re-import fresh FIFO-correct sample data.
+                    if (!localStorage.getItem('tradle_v16_sample_cleanup')) {
+                        const beforeV16 = this.tradeDatabase.trades.length;
+                        this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
+                            const tradeDate = (t.date || t.boughtDate || '').slice(0, 10);
+                            return tradeDate >= '2026-02-24';
+                        });
+                        localStorage.setItem('tradle_v16_sample_cleanup', '1');
+                        if (this.tradeDatabase.trades.length < beforeV16) {
+                            console.log(`🧹 v16 cleanup: removed ${beforeV16 - this.tradeDatabase.trades.length} stale pre-Feb-24 sample trades`);
+                            this.tradeDatabase.orderIds = new Set();
+                            this.tradeDatabase.trades.forEach(trade => {
+                                const eId = trade.entryOrderId || '';
+                                const xId = trade.exitOrderId  || '';
+                                if (eId && xId) this.tradeDatabase.orderIds.add(`${eId}__${xId}`);
+                                else { if (eId) this.tradeDatabase.orderIds.add(eId); if (xId) this.tradeDatabase.orderIds.add(xId); }
+                            });
+                            this.saveTradeDatabase();
+                        }
                     }
 
                     // Deduplicate by fingerprint (fixes cross-browser sync duplication)
