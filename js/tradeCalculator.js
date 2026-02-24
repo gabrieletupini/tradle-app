@@ -223,7 +223,7 @@ class TradeCalculator {
             quantity: entryOrder.qty,
             entryTime: entryOrder.placingTime,
             exitTime: exitOrder.placingTime,
-            contract: entryOrder.symbol,
+            contract: (entryOrder.symbol || '').replace(/^[A-Z0-9_]+:/, '') || entryOrder.symbol || 'Unknown',
             side: side,
             margin: parseMargin(entryOrder.margin || exitOrder.margin),
             leverage: entryOrder.leverage || exitOrder.leverage || '',

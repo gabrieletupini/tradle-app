@@ -760,30 +760,19 @@ class TradleApp {
                         }
                     });
 
-                    // Migration: remove trades stored with unresolved broker prefixes (e.g. "B2PRIME:SPXUSD")
-                    // These were imported before the prefix-stripping regex fix and must be re-imported
-                    const beforePrefixClean = this.tradeDatabase.trades.length;
-                    this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
-                        const contract = t.contract || t.symbol || '';
-                        return !/^[A-Z0-9_]+:/.test(contract);
-                    });
-                    if (this.tradeDatabase.trades.length < beforePrefixClean) {
-                        console.log(`🧹 Removed ${beforePrefixClean - this.tradeDatabase.trades.length} trades with unresolved broker prefixes`);
-                        this.saveTradeDatabase();
-                    }
-
-                    // One-time cleanup (v17): remove sample-data trades (dates < 2026-02-24) so
-                    // autoLoadDefaultCSV re-imports them fresh with the corrected simple CSV format.
-                    // This supersedes the v16 cleanup and the old repeating Feb-24 migration.
-                    if (!localStorage.getItem('tradle_v17_sample_fix')) {
-                        localStorage.setItem('tradle_v17_sample_fix', '1');
-                        const beforeV17 = this.tradeDatabase.trades.length;
+                    // One-time cleanup (v18): remove all pre-Feb-24 sample trades so autoLoadDefaultCSV
+                    // re-imports them fresh. createTradeObject now strips broker prefixes from contract
+                    // (e.g. "CME_MINI:ES1!" → "ES1!") so the prefix migration below is no longer needed
+                    // on every load. Also purges any old trades that were stored with prefixed contracts.
+                    if (!localStorage.getItem('tradle_v18_fix')) {
+                        localStorage.setItem('tradle_v18_fix', '1');
+                        const beforeV18 = this.tradeDatabase.trades.length;
                         this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
                             const tradeDate = (t.date || t.boughtDate || '').slice(0, 10);
                             return tradeDate >= '2026-02-24';
                         });
-                        if (this.tradeDatabase.trades.length < beforeV17) {
-                            console.log(`🧹 v17 cleanup: removed ${beforeV17 - this.tradeDatabase.trades.length} stale sample trades`);
+                        if (this.tradeDatabase.trades.length < beforeV18) {
+                            console.log(`🧹 v18 cleanup: removed ${beforeV18 - this.tradeDatabase.trades.length} stale sample trades`);
                             this.tradeDatabase.orderIds = new Set();
                             this.tradeDatabase.trades.forEach(trade => {
                                 const eId = trade.entryOrderId || '';
