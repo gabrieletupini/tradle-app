@@ -761,6 +761,25 @@ class TradleApp {
                         }
                     });
 
+                    // One-time cleanup (v20): if the DB only has Feb-24 trades (left over from the
+                    // erroneous v19 wipe), clear it so autoLoadDefaultCSV can reload all 3 sample
+                    // files (Feb 9-16 TV + IBKR + Feb 24 TV) and restore the full history.
+                    if (!localStorage.getItem('tradle_v20_fix')) {
+                        localStorage.setItem('tradle_v20_fix', '1');
+                        const onlyFeb24 = this.tradeDatabase.trades.length > 0 &&
+                            this.tradeDatabase.trades.every(t => {
+                                const d = (t.date || t.boughtDate || t.soldDate || '').slice(0, 10);
+                                return d >= '2026-02-24';
+                            });
+                        if (onlyFeb24) {
+                            const beforeV20 = this.tradeDatabase.trades.length;
+                            this.tradeDatabase.trades = [];
+                            this.tradeDatabase.orderIds = new Set();
+                            console.log(`🧹 v20 cleanup: cleared ${beforeV20} isolated Feb-24 trades for full reload`);
+                            this.saveTradeDatabase();
+                        }
+                    }
+
                     // Deduplicate by fingerprint (fixes cross-browser sync duplication)
                     const seen = new Set();
                     const before = this.tradeDatabase.trades.length;
