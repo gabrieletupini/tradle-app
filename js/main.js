@@ -737,16 +737,18 @@ class TradleApp {
                     this.tradeDatabase.trades = [...database.trades]; // Create fresh array
                     this.tradeDatabase.lastUpdated = database.lastUpdated || null;
 
-                    // Rebuild Order ID set from existing trades
+                    // Rebuild Order ID set from existing trades using pair keys.
+                    // Pair keys (entryId__exitId) let the same entry order appear in multiple
+                    // FIFO partial trades without blocking them as duplicates.
                     this.tradeDatabase.orderIds = new Set();
                     database.trades.forEach(trade => {
-                        if (trade.entryOrderId) this.tradeDatabase.orderIds.add(trade.entryOrderId);
-                        if (trade.exitOrderId) this.tradeDatabase.orderIds.add(trade.exitOrderId);
-                        // Also check for allOrderIds array
-                        if (trade.allOrderIds && Array.isArray(trade.allOrderIds)) {
-                            trade.allOrderIds.forEach(orderId => {
-                                if (orderId) this.tradeDatabase.orderIds.add(orderId);
-                            });
+                        const eId = trade.entryOrderId || '';
+                        const xId = trade.exitOrderId  || '';
+                        if (eId && xId) {
+                            this.tradeDatabase.orderIds.add(`${eId}__${xId}`);
+                        } else {
+                            if (eId) this.tradeDatabase.orderIds.add(eId);
+                            if (xId) this.tradeDatabase.orderIds.add(xId);
                         }
                     });
 
@@ -782,12 +784,17 @@ class TradleApp {
                     });
                     if (this.tradeDatabase.trades.length < beforeFeb24) {
                         console.log(`🧹 Removed ${beforeFeb24 - this.tradeDatabase.trades.length} stale Feb-24 trades (old algorithm) — please re-upload the CSV`);
-                        // Rebuild orderIds so those IDs are freed for immediate re-import
+                        // Rebuild orderIds (pair keys) so those IDs are freed for immediate re-import
                         this.tradeDatabase.orderIds = new Set();
                         this.tradeDatabase.trades.forEach(trade => {
-                            if (trade.entryOrderId) this.tradeDatabase.orderIds.add(trade.entryOrderId);
-                            if (trade.exitOrderId) this.tradeDatabase.orderIds.add(trade.exitOrderId);
-                            if (trade.allOrderIds) trade.allOrderIds.forEach(id => id && this.tradeDatabase.orderIds.add(id));
+                            const eId = trade.entryOrderId || '';
+                            const xId = trade.exitOrderId  || '';
+                            if (eId && xId) {
+                                this.tradeDatabase.orderIds.add(`${eId}__${xId}`);
+                            } else {
+                                if (eId) this.tradeDatabase.orderIds.add(eId);
+                                if (xId) this.tradeDatabase.orderIds.add(xId);
+                            }
                         });
                         this.saveTradeDatabase();
                     }
@@ -900,56 +907,67 @@ class TradleApp {
 
         // Process each new trade
         newTrades.forEach((trade, index) => {
-            // Try to find associated Order IDs for this trade
-            const tradeOrderIds = this.extractTradeOrderIds(trade, newOrders);
+            // Build a pair key from entryOrderId + exitOrderId.
+            // Using pairs (not individual IDs) lets a single entry order appear in multiple
+            // FIFO partial trades without blocking them — each partial has a unique exit order.
+            const entryId = trade.entryOrderId || trade.entryOrder?.orderId || '';
+            const exitId  = trade.exitOrderId  || trade.exitOrder?.orderId  || '';
+            const pairKey = (entryId && exitId) ? `${entryId}__${exitId}` : null;
 
-            if (tradeOrderIds.length === 0) {
-                console.warn(`⚠️ Trade ${index + 1}: No Order IDs found, skipping deduplication check`);
-                // Add trade without Order ID tracking (fallback behavior)
-                const enhancedTrade = { ...trade, id: this.generateTradeId() };
+            if (!pairKey) {
+                // Fallback: no direct IDs — use fuzzy matching
+                const fallbackIds = this.extractTradeOrderIds(trade, newOrders);
+                if (fallbackIds.length === 0) {
+                    console.warn(`⚠️ Trade ${index + 1}: No Order IDs found, skipping deduplication check`);
+                    const enhancedTrade = { ...trade, id: this.generateTradeId() };
+                    this.tradeDatabase.trades.push(enhancedTrade);
+                    addedTrades.push(enhancedTrade);
+                    newTradeCount++;
+                    return;
+                }
+                if (fallbackIds.some(id => this.tradeDatabase.orderIds.has(id))) {
+                    duplicateCount++;
+                    return;
+                }
+                const tradeId = (trade.id && trade.id.startsWith('trade_') && !trade.id.includes('_undefined'))
+                    ? trade.id : this.generateTradeId();
+                const enhancedTrade = { ...trade, id: tradeId,
+                    entryOrderId: fallbackIds[0] || null, exitOrderId: fallbackIds[1] || null,
+                    allOrderIds: fallbackIds };
                 this.tradeDatabase.trades.push(enhancedTrade);
                 addedTrades.push(enhancedTrade);
+                fallbackIds.forEach(id => this.tradeDatabase.orderIds.add(id));
                 newTradeCount++;
                 return;
             }
 
-            // Check if any Order ID already exists
-            const hasExistingOrderId = tradeOrderIds.some(orderId =>
-                this.tradeDatabase.orderIds.has(orderId)
-            );
-
-            if (hasExistingOrderId) {
+            // Pair-key dedup: same (entry, exit) combination = exact same trade
+            if (this.tradeDatabase.orderIds.has(pairKey)) {
                 duplicateCount++;
                 if (duplicateCount <= 3) {
-                    console.log(`🔄 Trade ${index + 1}: Duplicate found (Order IDs: ${tradeOrderIds.join(', ')})`);
+                    console.log(`🔄 Trade ${index + 1}: Duplicate found (pair: ${pairKey})`);
                 }
-            } else {
-                // New trade - add to database
-                // Keep existing deterministic id if present, otherwise generate one
-                const tradeId = (trade.id && trade.id.startsWith('trade_') && !trade.id.includes('_undefined'))
-                    ? trade.id
-                    : this.generateTradeId();
-                const enhancedTrade = {
-                    ...trade,
-                    id: tradeId,
-                    entryOrderId: tradeOrderIds[0] || null,
-                    exitOrderId: tradeOrderIds[1] || null,
-                    allOrderIds: tradeOrderIds
-                };
+                return;
+            }
 
-                this.tradeDatabase.trades.push(enhancedTrade);
-                addedTrades.push(enhancedTrade);
+            // New trade — add to database
+            const tradeId = (trade.id && trade.id.startsWith('trade_') && !trade.id.includes('_undefined'))
+                ? trade.id : this.generateTradeId();
+            const enhancedTrade = {
+                ...trade,
+                id: tradeId,
+                entryOrderId: entryId,
+                exitOrderId: exitId,
+                allOrderIds: [entryId, exitId]
+            };
 
-                // Track all Order IDs
-                tradeOrderIds.forEach(orderId => {
-                    this.tradeDatabase.orderIds.add(orderId);
-                });
+            this.tradeDatabase.trades.push(enhancedTrade);
+            addedTrades.push(enhancedTrade);
+            this.tradeDatabase.orderIds.add(pairKey);
+            newTradeCount++;
 
-                newTradeCount++;
-
-                if (newTradeCount <= 3) {
-                    console.log(`✅ Trade ${index + 1}: Added (Order IDs: ${tradeOrderIds.join(', ')})`);
-                }
+            if (newTradeCount <= 5) {
+                console.log(`✅ Trade ${index + 1}: Added (pair: ${pairKey})`);
             }
         });
 
