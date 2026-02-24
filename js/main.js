@@ -772,42 +772,18 @@ class TradleApp {
                         this.saveTradeDatabase();
                     }
 
-                    // Migration: remove Feb-24-2026 trades calculated by the old algorithm
-                    // (old matchTrades produced wrong pairs/commissions; re-upload the CSV to get correct results)
-                    const beforeFeb24 = this.tradeDatabase.trades.length;
-                    this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
-                        const tradeDate = (t.date || t.boughtDate || '').slice(0, 10);
-                        return tradeDate !== '2026-02-24';
-                    });
-                    if (this.tradeDatabase.trades.length < beforeFeb24) {
-                        console.log(`🧹 Removed ${beforeFeb24 - this.tradeDatabase.trades.length} stale Feb-24 trades (old algorithm) — please re-upload the CSV`);
-                        // Rebuild orderIds (pair keys) so those IDs are freed for immediate re-import
-                        this.tradeDatabase.orderIds = new Set();
-                        this.tradeDatabase.trades.forEach(trade => {
-                            const eId = trade.entryOrderId || '';
-                            const xId = trade.exitOrderId  || '';
-                            if (eId && xId) {
-                                this.tradeDatabase.orderIds.add(`${eId}__${xId}`);
-                            } else {
-                                if (eId) this.tradeDatabase.orderIds.add(eId);
-                                if (xId) this.tradeDatabase.orderIds.add(xId);
-                            }
-                        });
-                        this.saveTradeDatabase();
-                    }
-
-                    // One-time cleanup (v16): remove all pre-Feb-24 sample-data trades that were
-                    // duplicated by the pair-key dedup change. After removal the DB will be empty,
-                    // causing autoLoadDefaultCSV to re-import fresh FIFO-correct sample data.
-                    if (!localStorage.getItem('tradle_v16_sample_cleanup')) {
-                        const beforeV16 = this.tradeDatabase.trades.length;
+                    // One-time cleanup (v17): remove sample-data trades (dates < 2026-02-24) so
+                    // autoLoadDefaultCSV re-imports them fresh with the corrected simple CSV format.
+                    // This supersedes the v16 cleanup and the old repeating Feb-24 migration.
+                    if (!localStorage.getItem('tradle_v17_sample_fix')) {
+                        localStorage.setItem('tradle_v17_sample_fix', '1');
+                        const beforeV17 = this.tradeDatabase.trades.length;
                         this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
                             const tradeDate = (t.date || t.boughtDate || '').slice(0, 10);
                             return tradeDate >= '2026-02-24';
                         });
-                        localStorage.setItem('tradle_v16_sample_cleanup', '1');
-                        if (this.tradeDatabase.trades.length < beforeV16) {
-                            console.log(`🧹 v16 cleanup: removed ${beforeV16 - this.tradeDatabase.trades.length} stale pre-Feb-24 sample trades`);
+                        if (this.tradeDatabase.trades.length < beforeV17) {
+                            console.log(`🧹 v17 cleanup: removed ${beforeV17 - this.tradeDatabase.trades.length} stale sample trades`);
                             this.tradeDatabase.orderIds = new Set();
                             this.tradeDatabase.trades.forEach(trade => {
                                 const eId = trade.entryOrderId || '';
