@@ -1547,18 +1547,27 @@ class UIController {
             data: {
                 labels: evolutionData.labels,
                 datasets: [{
-                    label: 'Portfolio Value',
+                    label: 'Cumulative P&L',
                     data: evolutionData.values,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: (context) => {
+                        const v = context.dataset.data[context.dataIndex];
+                        return v >= 0 ? '#10b981' : '#ef4444';
+                    },
+                    segment: {
+                        borderColor: (ctx) => ctx.p1.parsed.y >= 0 ? '#10b981' : '#ef4444'
+                    },
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#3b82f6',
+                    tension: 0.3,
+                    pointBackgroundColor: (context) => {
+                        const v = context.dataset.data[context.dataIndex];
+                        return v >= 0 ? '#10b981' : '#ef4444';
+                    },
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 }]
             },
             options: {
@@ -1587,12 +1596,18 @@ class UIController {
                 },
                 scales: {
                     x: {
-                        display: false
+                        display: true,
+                        ticks: {
+                            color: '#6b7280',
+                            font: { size: 11 },
+                            maxRotation: 0
+                        },
+                        grid: { display: false }
                     },
                     y: {
                         display: true,
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.1)',
+                            color: (context) => context.tick.value === 0 ? 'rgba(0,0,0,0.3)' : 'rgba(0, 0, 0, 0.1)',
                             drawBorder: false
                         },
                         ticks: {
@@ -1623,13 +1638,25 @@ class UIController {
             return { labels: ['Start'], values: [0] };
         }
 
+        // Group by calendar date (exit date) so each point = one trading day
+        const dailyPnL = {};
+        trades.forEach(trade => {
+            const dateStr = (trade.date || trade.soldDate || '').slice(0, 10);
+            if (!dateStr) return;
+            dailyPnL[dateStr] = (dailyPnL[dateStr] || 0) + (trade.netProfit || 0);
+        });
+
+        const sortedDates = Object.keys(dailyPnL).sort();
         const labels = ['Start'];
         const values = [0];
         let cumulativePnL = 0;
 
-        trades.forEach((trade, index) => {
-            cumulativePnL += trade.netProfit || 0;
-            labels.push(`Trade ${index + 1}`);
+        sortedDates.forEach(dateStr => {
+            cumulativePnL += dailyPnL[dateStr];
+            // Format as "Feb 9" style
+            const d = new Date(dateStr + 'T12:00:00');
+            const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            labels.push(label);
             values.push(cumulativePnL);
         });
 
