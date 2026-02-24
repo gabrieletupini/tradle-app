@@ -24,9 +24,77 @@ class TradeCalculator {
             'ZN1!': { multiplier: 1000, commission: 2.50, name: '10-Year T-Note' },
             '6E1!': { multiplier: 125000, commission: 2.50, name: 'Euro FX' },
             '6J1!': { multiplier: 12500000, commission: 2.50, name: 'Japanese Yen' },
-            // CFD instruments (B2Prime / other CFD brokers)
+            // ── Additional CME futures ────────────────────────────────────────
+            'ZC1!': { multiplier: 50,    commission: 2.50, name: 'Corn' },
+            'ZW1!': { multiplier: 50,    commission: 2.50, name: 'Wheat' },
+            'ZS1!': { multiplier: 50,    commission: 2.50, name: 'Soybeans' },
+            'HG1!': { multiplier: 25000, commission: 2.50, name: 'Copper' },
+            'PL1!': { multiplier: 50,    commission: 2.50, name: 'Platinum' },
+            '6B1!': { multiplier: 62500, commission: 2.50, name: 'British Pound' },
+            '6C1!': { multiplier: 100000,commission: 2.50, name: 'Canadian Dollar' },
+            '6A1!': { multiplier: 100000,commission: 2.50, name: 'Australian Dollar' },
+            '6S1!': { multiplier: 125000,commission: 2.50, name: 'Swiss Franc' },
+            '6N1!': { multiplier: 100000,commission: 2.50, name: 'New Zealand Dollar' },
+            '6M1!': { multiplier: 500000,commission: 2.50, name: 'Mexican Peso' },
+
+            // ── CFD indices (B2Prime / OANDA / Pepperstone / etc.) ───────────
             'SPXUSD': { multiplier: 1, commission: 0, name: 'S&P 500 CFD' },
             'NAS100': { multiplier: 1, commission: 0, name: 'Nasdaq 100 CFD' },
+            'US30':   { multiplier: 1, commission: 0, name: 'Dow Jones CFD' },
+            'US2000': { multiplier: 1, commission: 0, name: 'Russell 2000 CFD' },
+            'GER40':  { multiplier: 1, commission: 0, name: 'DAX 40 CFD' },
+            'UK100':  { multiplier: 1, commission: 0, name: 'FTSE 100 CFD' },
+            'FRA40':  { multiplier: 1, commission: 0, name: 'CAC 40 CFD' },
+            'JPN225': { multiplier: 1, commission: 0, name: 'Nikkei 225 CFD' },
+            'HK50':   { multiplier: 1, commission: 0, name: 'Hang Seng CFD' },
+            'AUS200': { multiplier: 1, commission: 0, name: 'ASX 200 CFD' },
+
+            // ── CFD commodities ───────────────────────────────────────────────
+            'XAUUSD': { multiplier: 1, commission: 0, name: 'Gold CFD' },
+            'XAGUSD': { multiplier: 1, commission: 0, name: 'Silver CFD' },
+            'XPTUSD': { multiplier: 1, commission: 0, name: 'Platinum CFD' },
+            'USOIL':  { multiplier: 1, commission: 0, name: 'US Crude Oil CFD' },
+            'UKOIL':  { multiplier: 1, commission: 0, name: 'Brent Oil CFD' },
+            'NATGAS': { multiplier: 1, commission: 0, name: 'Natural Gas CFD' },
+
+            // ── CFD forex majors ──────────────────────────────────────────────
+            'EURUSD': { multiplier: 1, commission: 0, name: 'EUR/USD' },
+            'GBPUSD': { multiplier: 1, commission: 0, name: 'GBP/USD' },
+            'USDJPY': { multiplier: 1, commission: 0, name: 'USD/JPY' },
+            'USDCHF': { multiplier: 1, commission: 0, name: 'USD/CHF' },
+            'AUDUSD': { multiplier: 1, commission: 0, name: 'AUD/USD' },
+            'NZDUSD': { multiplier: 1, commission: 0, name: 'NZD/USD' },
+            'USDCAD': { multiplier: 1, commission: 0, name: 'USD/CAD' },
+            // Reversed-quote variants (as B2Prime sometimes labels them)
+            'USDEUR': { multiplier: 1, commission: 0, name: 'USD/EUR' },
+            'USDGBP': { multiplier: 1, commission: 0, name: 'USD/GBP' },
+            'JPYUSD': { multiplier: 1, commission: 0, name: 'JPY/USD' },
+
+            // ── CFD forex crosses ─────────────────────────────────────────────
+            'EURGBP': { multiplier: 1, commission: 0, name: 'EUR/GBP' },
+            'EURJPY': { multiplier: 1, commission: 0, name: 'EUR/JPY' },
+            'EURCAD': { multiplier: 1, commission: 0, name: 'EUR/CAD' },
+            'EURCHF': { multiplier: 1, commission: 0, name: 'EUR/CHF' },
+            'EURAUD': { multiplier: 1, commission: 0, name: 'EUR/AUD' },
+            'EURNZD': { multiplier: 1, commission: 0, name: 'EUR/NZD' },
+            'GBPJPY': { multiplier: 1, commission: 0, name: 'GBP/JPY' },
+            'GBPCAD': { multiplier: 1, commission: 0, name: 'GBP/CAD' },
+            'GBPCHF': { multiplier: 1, commission: 0, name: 'GBP/CHF' },
+            'GBPAUD': { multiplier: 1, commission: 0, name: 'GBP/AUD' },
+            'GBPNZD': { multiplier: 1, commission: 0, name: 'GBP/NZD' },
+            'AUDJPY': { multiplier: 1, commission: 0, name: 'AUD/JPY' },
+            'AUDCAD': { multiplier: 1, commission: 0, name: 'AUD/CAD' },
+            'AUDCHF': { multiplier: 1, commission: 0, name: 'AUD/CHF' },
+            'AUDNZD': { multiplier: 1, commission: 0, name: 'AUD/NZD' },
+            'CADJPY': { multiplier: 1, commission: 0, name: 'CAD/JPY' },
+            'CHFJPY': { multiplier: 1, commission: 0, name: 'CHF/JPY' },
+            'NZDJPY': { multiplier: 1, commission: 0, name: 'NZD/JPY' },
+            'NZDCAD': { multiplier: 1, commission: 0, name: 'NZD/CAD' },
+            'NZDCHF': { multiplier: 1, commission: 0, name: 'NZD/CHF' },
+
+            // ── CFD crypto (TV / broker CFDs) ─────────────────────────────────
+            'BTCUSD': { multiplier: 1, commission: 0, name: 'Bitcoin CFD' },
+            'ETHUSD': { multiplier: 1, commission: 0, name: 'Ethereum CFD' },
         };
 
         // Default specs for unknown symbols
