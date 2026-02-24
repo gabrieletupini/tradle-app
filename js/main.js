@@ -760,6 +760,19 @@ class TradleApp {
                         }
                     });
 
+                    // One-time cleanup (v19): clear old Feb 9-16 sample trades so the updated Feb-24
+                    // sample CSVs are imported fresh (IBKR CSV is now empty; commission logic changed).
+                    if (!localStorage.getItem('tradle_v19_fix')) {
+                        localStorage.setItem('tradle_v19_fix', '1');
+                        const beforeV19 = this.tradeDatabase.trades.length;
+                        this.tradeDatabase.trades = [];
+                        this.tradeDatabase.orderIds = new Set();
+                        if (beforeV19 > 0) {
+                            console.log(`🧹 v19 cleanup: cleared ${beforeV19} old sample trades for fresh re-import`);
+                            this.saveTradeDatabase();
+                        }
+                    }
+
                     // One-time cleanup (v18): remove all pre-Feb-24 sample trades so autoLoadDefaultCSV
                     // re-imports them fresh. createTradeObject now strips broker prefixes from contract
                     // (e.g. "CME_MINI:ES1!" → "ES1!") so the prefix migration below is no longer needed
