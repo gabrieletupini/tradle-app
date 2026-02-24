@@ -119,7 +119,8 @@ class TradleApp {
     async autoLoadDefaultCSV() {
         const sampleFiles = [
             { path: 'data/sample-data/paper-trading-order-history-2026-02-12.csv', format: 'tradingview' },
-            { path: 'data/sample-data/ibkr-trade-report-2026-02-12.csv', format: 'ibkr' }
+            { path: 'data/sample-data/ibkr-trade-report-2026-02-12.csv', format: 'ibkr' },
+            { path: 'data/sample-data/paper-trading-order-history-2026-02-24.csv', format: 'tradingview' }
         ];
 
         // Only import sample data when the database is empty.
@@ -759,43 +760,6 @@ class TradleApp {
                             trade.broker = oid.startsWith('ibkr_') ? 'IBKR' : 'TradingView';
                         }
                     });
-
-                    // One-time cleanup (v19): clear old Feb 9-16 sample trades so the updated Feb-24
-                    // sample CSVs are imported fresh (IBKR CSV is now empty; commission logic changed).
-                    if (!localStorage.getItem('tradle_v19_fix')) {
-                        localStorage.setItem('tradle_v19_fix', '1');
-                        const beforeV19 = this.tradeDatabase.trades.length;
-                        this.tradeDatabase.trades = [];
-                        this.tradeDatabase.orderIds = new Set();
-                        if (beforeV19 > 0) {
-                            console.log(`🧹 v19 cleanup: cleared ${beforeV19} old sample trades for fresh re-import`);
-                            this.saveTradeDatabase();
-                        }
-                    }
-
-                    // One-time cleanup (v18): remove all pre-Feb-24 sample trades so autoLoadDefaultCSV
-                    // re-imports them fresh. createTradeObject now strips broker prefixes from contract
-                    // (e.g. "CME_MINI:ES1!" → "ES1!") so the prefix migration below is no longer needed
-                    // on every load. Also purges any old trades that were stored with prefixed contracts.
-                    if (!localStorage.getItem('tradle_v18_fix')) {
-                        localStorage.setItem('tradle_v18_fix', '1');
-                        const beforeV18 = this.tradeDatabase.trades.length;
-                        this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
-                            const tradeDate = (t.date || t.boughtDate || '').slice(0, 10);
-                            return tradeDate >= '2026-02-24';
-                        });
-                        if (this.tradeDatabase.trades.length < beforeV18) {
-                            console.log(`🧹 v18 cleanup: removed ${beforeV18 - this.tradeDatabase.trades.length} stale sample trades`);
-                            this.tradeDatabase.orderIds = new Set();
-                            this.tradeDatabase.trades.forEach(trade => {
-                                const eId = trade.entryOrderId || '';
-                                const xId = trade.exitOrderId  || '';
-                                if (eId && xId) this.tradeDatabase.orderIds.add(`${eId}__${xId}`);
-                                else { if (eId) this.tradeDatabase.orderIds.add(eId); if (xId) this.tradeDatabase.orderIds.add(xId); }
-                            });
-                            this.saveTradeDatabase();
-                        }
-                    }
 
                     // Deduplicate by fingerprint (fixes cross-browser sync duplication)
                     const seen = new Set();
