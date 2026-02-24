@@ -761,6 +761,18 @@ class TradleApp {
                         }
                     });
 
+                    // Migration: remove trades stored with unresolved broker prefixes (e.g. "B2PRIME:SPXUSD")
+                    // These were imported before the prefix-stripping regex fix and must be re-imported
+                    const beforePrefixClean = this.tradeDatabase.trades.length;
+                    this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
+                        const contract = t.contract || t.symbol || '';
+                        return !/^[A-Z0-9_]+:/.test(contract);
+                    });
+                    if (this.tradeDatabase.trades.length < beforePrefixClean) {
+                        console.log(`🧹 Removed ${beforePrefixClean - this.tradeDatabase.trades.length} trades with unresolved broker prefixes`);
+                        this.saveTradeDatabase();
+                    }
+
                     // Deduplicate by fingerprint (fixes cross-browser sync duplication)
                     const seen = new Set();
                     const before = this.tradeDatabase.trades.length;
@@ -1075,8 +1087,11 @@ class TradleApp {
         localStorage.removeItem('tradle_current_data');
 
         this.uiController.hideDashboard();
-        this.uiController.showToast('All trade data cleared successfully!', 'info');
+        this.uiController.showToast('Trade data cleared. Restoring sample data...', 'info');
         console.log('🗑️ Trade database cleared');
+
+        // Immediately reload sample data so the dashboard is restored
+        this.autoLoadDefaultCSV();
     }
 
     /**

@@ -24,6 +24,9 @@ class TradeCalculator {
             'ZN1!': { multiplier: 1000, commission: 2.50, name: '10-Year T-Note' },
             '6E1!': { multiplier: 125000, commission: 2.50, name: 'Euro FX' },
             '6J1!': { multiplier: 12500000, commission: 2.50, name: 'Japanese Yen' },
+            // CFD instruments (B2Prime / other CFD brokers)
+            'SPXUSD': { multiplier: 1, commission: 0, name: 'S&P 500 CFD' },
+            'NAS100': { multiplier: 1, commission: 0, name: 'Nasdaq 100 CFD' },
         };
 
         // Default specs for unknown symbols
@@ -36,7 +39,7 @@ class TradeCalculator {
      */
     getContractSpecs(symbolRaw) {
         if (!symbolRaw) return this.DEFAULT_SPECS;
-        const stripped = symbolRaw.replace(/^[A-Z_]+:/, ''); // "CME_MINI:ES1!" → "ES1!"
+        const stripped = symbolRaw.replace(/^[A-Z0-9_]+:/, ''); // "CME_MINI:ES1!" → "ES1!", "B2PRIME:SPXUSD" → "SPXUSD"
         return this.CONTRACT_SPECS[stripped] || this.DEFAULT_SPECS;
     }
 
@@ -103,10 +106,9 @@ class TradeCalculator {
     }
 
     /**
-     * Match buy/sell order pairs using order type intelligence.
-     * Entry orders (Limit/Stop) are paired with the next opposite-side exit order (Market).
-     * Orphan exit orders (e.g. a Market buy that exits a short from previous data) are skipped.
-     * For IBKR-style data (all Market type, varying quantities), uses look-ahead matching.
+     * Match orders into trades using FIFO position tracking.
+     * Handles partial fills: a single large entry (e.g. Sell 5) is correctly matched
+     * against multiple smaller exits (Buy 2 + Buy 2 + Buy 1) using a per-symbol position queue.
      */
     matchTrades(orders) {
         const trades = [];
@@ -114,67 +116,66 @@ class TradeCalculator {
             .filter(order => order.fillPrice && order.placingTime)
             .sort((a, b) => a.placingTime - b.placingTime);
 
-        console.log(`Matching ${validOrders.length} valid orders chronologically`);
+        console.log(`Matching ${validOrders.length} valid orders chronologically (FIFO)`);
 
-        // Track which orders have been used
-        const used = new Set();
+        // Position tracker per symbol: array of open lots { qty, price, order }
+        const positions = {};
 
-        let i = 0;
-        while (i < validOrders.length) {
-            if (used.has(i)) { i++; continue; }
+        for (const order of validOrders) {
+            if (order.status !== 'Filled') continue;
 
-            const current = validOrders[i];
+            const sym = order.symbol;
+            if (!positions[sym]) positions[sym] = [];
+            const pos = positions[sym];
 
-            // Look ahead for the best matching opposite-side order
-            let bestMatch = -1;
-            let bestMatchPriority = -1;
-
-            for (let j = i + 1; j < validOrders.length; j++) {
-                if (used.has(j)) continue;
-                const candidate = validOrders[j];
-
-                if (!this.isValidTradePair(current, candidate)) continue;
-
-                const currentIsEntry = this.isEntryOrderType(current.type);
-                const candidateIsEntry = this.isEntryOrderType(candidate.type);
-
-                // Priority: Entry→Exit (3), same-type fallback (2), Exit→Entry (1)
-                let priority = 2;
-                if (currentIsEntry && !candidateIsEntry) priority = 3;
-                else if (!currentIsEntry && candidateIsEntry) priority = 1;
-
-                if (priority > bestMatchPriority) {
-                    bestMatch = j;
-                    bestMatchPriority = priority;
-                    // If we found a perfect Entry→Exit pair, use it immediately
-                    if (priority === 3) break;
-                }
-                // For same-type fallback, take the nearest match (first found)
-                if (priority === 2 && bestMatchPriority === 2) break;
+            if (pos.length === 0) {
+                // No open position — start one
+                pos.push({ qty: order.qty, price: order.fillPrice, order });
+                continue;
             }
 
-            if (bestMatch !== -1) {
-                const match = validOrders[bestMatch];
+            const openSide = pos[0].order.side.toLowerCase();
+            const isSameSide = openSide === order.side.toLowerCase();
 
-                // Skip if current is an orphan exit and match is an entry (wrong direction)
-                if (bestMatchPriority === 1) {
-                    console.log(`⏭️ Skipping orphan exit: ${current.side} ${current.type} ${current.fillPrice}`);
-                    i++;
-                    continue;
-                }
+            if (isSameSide) {
+                // Scale into existing position
+                pos.push({ qty: order.qty, price: order.fillPrice, order });
+                continue;
+            }
 
-                const trade = this.createTradeObject(current, match);
+            // Opposite side — close open lots FIFO
+            let remainingQty = order.qty;
+            while (remainingQty > 0 && pos.length > 0) {
+                const lot = pos[0];
+                const closeQty = Math.min(remainingQty, lot.qty);
+
+                // Copies that carry the partial qty and the original qty (for commission scaling)
+                const entryOrderCopy = { ...lot.order, originalQty: lot.order.qty, qty: closeQty };
+                const exitOrderCopy  = { ...order, originalQty: order.qty, qty: closeQty };
+
+                const trade = this.createTradeObject(entryOrderCopy, exitOrderCopy);
                 trades.push(trade);
-                used.add(i);
-                used.add(bestMatch);
 
-                const label = bestMatchPriority === 3 ? '' : ' (fallback)';
-                console.log(`✅ Trade ${trades.length}${label}: ${current.side} ${current.type} ${current.fillPrice} -> ${match.side} ${match.type} ${match.fillPrice} [${trade.side}]`);
-            } else {
-                console.log(`⏭️ No match found for: ${current.side} ${current.type} ${current.fillPrice} qty=${current.qty}`);
+                const label = (closeQty < lot.order.qty || closeQty < order.qty) ? ' (partial)' : '';
+                console.log(`✅ Trade ${trades.length}${label}: ${lot.order.side} ${lot.price} → ${order.side} ${order.fillPrice} qty=${closeQty} [${trade.side}]`);
+
+                lot.qty -= closeQty;
+                remainingQty -= closeQty;
+                if (lot.qty <= 0) pos.shift();
             }
 
-            i++;
+            // Leftover quantity opens a new position in the opposite direction
+            if (remainingQty > 0) {
+                pos.push({ qty: remainingQty, price: order.fillPrice, order });
+            }
+        }
+
+        // Log any positions left open (e.g. no closing order in this CSV)
+        for (const [sym, pos] of Object.entries(positions)) {
+            if (pos.length > 0) {
+                const unclosed = pos.reduce((s, l) => s + l.qty, 0);
+                console.log(`⚠️ Unclosed position: ${sym} ${unclosed} qty remaining`);
+            }
         }
 
         console.log(`Matched ${trades.length} complete trades`);
@@ -248,8 +249,21 @@ class TradeCalculator {
             : exitPrice - entryPrice;
         const grossProfit = pointDifference * quantity * specs.multiplier;
 
-        // Commission calculation (per contract per side, so multiply by 2)
-        const totalCommission = specs.commission * quantity * 2;
+        // Commission: if the CSV supplied per-order values, use those (scaled for partial fills).
+        // A blank CSV commission means paper trading with $0 commission.
+        // Fall back to the spec-based rate only when there is no CSV commission field at all.
+        let totalCommission;
+        const entryOrder = trade.entryOrder;
+        const exitOrder  = trade.exitOrder;
+        if (entryOrder && entryOrder.commission !== undefined && entryOrder.commission !== null) {
+            const origEntryQty = entryOrder.originalQty || quantity;
+            const origExitQty  = exitOrder  ? (exitOrder.originalQty  || quantity) : quantity;
+            const entryComm = (parseFloat(entryOrder.commission) || 0) * (quantity / origEntryQty);
+            const exitComm  = (parseFloat(exitOrder?.commission)  || 0) * (quantity / origExitQty);
+            totalCommission = entryComm + exitComm;
+        } else {
+            totalCommission = specs.commission * quantity * 2;
+        }
         const netProfit = grossProfit - totalCommission;
 
         // Determine win/loss status
