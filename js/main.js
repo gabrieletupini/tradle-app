@@ -82,21 +82,70 @@ class TradleApp {
         // Load persistent trade database
         this.loadTradeDatabase();
 
-        // v21: if partial Feb-24 trades were just cleared by the migration, re-pull Firebase
-        // so the complete set of Feb-24 trades can be merged without fingerprint conflicts.
+        // v21: if partial Feb-24 trades were just cleared by the migration, restore the full
+        // set. Try Firebase first (authoritative source); fall back to the committed sample
+        // file if Firebase has nothing new — that file is always available and has all 5
+        // correct Feb-24 trades.
         if (localStorage.getItem('tradle_v21_need_resync')) {
             localStorage.removeItem('tradle_v21_need_resync');
             try {
+                let feb24Restored = false;
+
+                // Attempt 1: pull from Firebase (no local Feb-24 fingerprints left to block)
                 if (typeof FirebaseSync !== 'undefined') {
-                    console.log('🔄 v21 re-sync: pulling fresh Feb-24 trades from Firebase...');
+                    console.log('🔄 v21 re-sync: pulling Feb-24 trades from Firebase...');
                     const resync = await FirebaseSync.pullTradeDatabase();
                     if (resync.merged > 0) {
-                        console.log(`📥 v21 re-sync: merged ${resync.merged} Feb-24 trades from Firebase`);
+                        console.log(`📥 v21 re-sync: merged ${resync.merged} trades from Firebase`);
                         this.loadTradeDatabase();
+                    }
+                    feb24Restored = this.tradeDatabase.trades.some(t =>
+                        (t.date || t.boughtDate || t.soldDate || '').slice(0, 10) >= '2026-02-24'
+                    );
+                }
+
+                // Attempt 2: load from committed sample file as fallback
+                if (!feb24Restored) {
+                    console.log('🔄 v21 fallback: loading Feb-24 from sample file...');
+                    const resp = await fetch('data/sample-data/paper-trading-order-history-2026-02-24.csv');
+                    if (resp.ok) {
+                        const csv = await resp.text();
+                        const parseResult = await this.csvParser.parseCSV(csv, 'tradingview');
+                        const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
+                        tradeResult.trades.forEach(t => t.broker = 'TradingView');
+                        this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+                        this.saveTradeDatabase();
+                        console.log(`✅ v21 fallback: restored ${tradeResult.trades.length} Feb-24 trades from sample file`);
                     }
                 }
             } catch (e) {
                 console.warn('⚠️ v21 re-sync failed:', e.message);
+            }
+        }
+
+        // v21b: one-time check that Feb-24 trades are present. If v21 ran but the re-sync
+        // failed to restore them (Firebase had no data / merged=0), load from sample file now.
+        if (!localStorage.getItem('tradle_v21b_fix')) {
+            localStorage.setItem('tradle_v21b_fix', '1');
+            const hasFeb24 = this.tradeDatabase.trades.some(t =>
+                (t.date || t.boughtDate || t.soldDate || '').slice(0, 10) >= '2026-02-24'
+            );
+            if (!hasFeb24 && this.tradeDatabase.trades.length > 0) {
+                console.log('🔄 v21b: Feb-24 trades missing, loading from sample file...');
+                try {
+                    const resp = await fetch('data/sample-data/paper-trading-order-history-2026-02-24.csv');
+                    if (resp.ok) {
+                        const csv = await resp.text();
+                        const parseResult = await this.csvParser.parseCSV(csv, 'tradingview');
+                        const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
+                        tradeResult.trades.forEach(t => t.broker = 'TradingView');
+                        this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+                        this.saveTradeDatabase();
+                        console.log(`✅ v21b: restored ${tradeResult.trades.length} Feb-24 trades from sample file`);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ v21b fallback failed:', e.message);
+                }
             }
         }
 
