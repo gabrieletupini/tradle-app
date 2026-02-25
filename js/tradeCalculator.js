@@ -182,7 +182,9 @@ class TradeCalculator {
         const trades = [];
         const validOrders = orders
             .filter(order => order.fillPrice && order.placingTime)
-            .sort((a, b) => a.placingTime - b.placingTime);
+            // Primary: chronological. Secondary: price ascending (stable tiebreaker so
+            // same-timestamp orders always sort identically across devices/JS engines).
+            .sort((a, b) => (a.placingTime - b.placingTime) || (a.fillPrice - b.fillPrice));
 
         console.log(`Matching ${validOrders.length} valid orders chronologically (FIFO)`);
 

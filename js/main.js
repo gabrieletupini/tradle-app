@@ -175,6 +175,40 @@ class TradleApp {
             }
         }
 
+        // v21d: if IBKR trade count != 4, a same-timestamp tie-break during FIFO sorting
+        // produced a different set of pairs on this device than the canonical calculation.
+        // Clear and reload from sample so all devices converge on the identical 4 trades.
+        if (!localStorage.getItem('tradle_v21d_fix')) {
+            localStorage.setItem('tradle_v21d_fix', '1');
+            const ibkrCount = this.tradeDatabase.trades.filter(t => t.broker === 'IBKR').length;
+            if (ibkrCount > 0 && ibkrCount !== 4) {
+                console.log(`🔄 v21d: ${ibkrCount} IBKR trades (expected 4), reloading from sample…`);
+                this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => t.broker !== 'IBKR');
+                this.tradeDatabase.orderIds = new Set();
+                this.tradeDatabase.trades.forEach(trade => {
+                    const eId = trade.entryOrderId || '';
+                    const xId = trade.exitOrderId  || '';
+                    if (eId && xId) { this.tradeDatabase.orderIds.add(`${eId}__${xId}`); }
+                    else { if (eId) this.tradeDatabase.orderIds.add(eId); if (xId) this.tradeDatabase.orderIds.add(xId); }
+                });
+                this.saveTradeDatabase();
+                try {
+                    const resp = await fetch('data/sample-data/ibkr-trade-report-2026-02-12.csv');
+                    if (resp.ok) {
+                        const csv = await resp.text();
+                        const parseResult = await this.csvParser.parseCSV(csv, 'ibkr');
+                        const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
+                        tradeResult.trades.forEach(t => t.broker = 'IBKR');
+                        this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+                        this.saveTradeDatabase();
+                        console.log(`✅ v21d: reloaded ${tradeResult.trades.length} IBKR trades`);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ v21d IBKR reload failed:', e.message);
+                }
+            }
+        }
+
         // Check for any startup parameters or saved data
         const hasRestoredData = this.checkForSavedData();
 
