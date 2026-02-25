@@ -82,6 +82,24 @@ class TradleApp {
         // Load persistent trade database
         this.loadTradeDatabase();
 
+        // v21: if partial Feb-24 trades were just cleared by the migration, re-pull Firebase
+        // so the complete set of Feb-24 trades can be merged without fingerprint conflicts.
+        if (localStorage.getItem('tradle_v21_need_resync')) {
+            localStorage.removeItem('tradle_v21_need_resync');
+            try {
+                if (typeof FirebaseSync !== 'undefined') {
+                    console.log('🔄 v21 re-sync: pulling fresh Feb-24 trades from Firebase...');
+                    const resync = await FirebaseSync.pullTradeDatabase();
+                    if (resync.merged > 0) {
+                        console.log(`📥 v21 re-sync: merged ${resync.merged} Feb-24 trades from Firebase`);
+                        this.loadTradeDatabase();
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ v21 re-sync failed:', e.message);
+            }
+        }
+
         // Check for any startup parameters or saved data
         const hasRestoredData = this.checkForSavedData();
 
@@ -777,6 +795,42 @@ class TradleApp {
                             this.tradeDatabase.orderIds = new Set();
                             console.log(`🧹 v20 cleanup: cleared ${beforeV20} isolated Feb-24 trades for full reload`);
                             this.saveTradeDatabase();
+                        }
+                    }
+
+                    // One-time cleanup (v21): if the DB has some Feb-24 trades but fewer than the
+                    // expected 5 (stale partial state from before the full Feb-24 sample was
+                    // committed), remove only those Feb-24 trades and schedule a fresh Firebase
+                    // pull so the complete set can be merged in without fingerprint conflicts.
+                    if (!localStorage.getItem('tradle_v21_fix')) {
+                        localStorage.setItem('tradle_v21_fix', '1');
+                        const feb24Trades = this.tradeDatabase.trades.filter(t => {
+                            const d = (t.date || t.boughtDate || t.soldDate || '').slice(0, 10);
+                            return d >= '2026-02-24';
+                        });
+                        if (feb24Trades.length > 0 && feb24Trades.length < 5) {
+                            const beforeV21 = feb24Trades.length;
+                            this.tradeDatabase.trades = this.tradeDatabase.trades.filter(t => {
+                                const d = (t.date || t.boughtDate || t.soldDate || '').slice(0, 10);
+                                return d < '2026-02-24';
+                            });
+                            // Rebuild orderIds without the removed Feb-24 trades
+                            this.tradeDatabase.orderIds = new Set();
+                            this.tradeDatabase.trades.forEach(trade => {
+                                const eId = trade.entryOrderId || '';
+                                const xId = trade.exitOrderId  || '';
+                                if (eId && xId) {
+                                    this.tradeDatabase.orderIds.add(`${eId}__${xId}`);
+                                } else {
+                                    if (eId) this.tradeDatabase.orderIds.add(eId);
+                                    if (xId) this.tradeDatabase.orderIds.add(xId);
+                                }
+                            });
+                            console.log(`🧹 v21 cleanup: removed ${beforeV21} partial Feb-24 trades — will re-sync from Firebase`);
+                            this.saveTradeDatabase();
+                            // Signal initialize() to re-pull Firebase now that the conflicting
+                            // local fingerprints are gone
+                            localStorage.setItem('tradle_v21_need_resync', '1');
                         }
                     }
 
