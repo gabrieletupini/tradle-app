@@ -235,6 +235,13 @@ class TradleApp {
         if (typeof this.uiController.renderUploadHistory === 'function') {
             this.uiController.renderUploadHistory(this.getUploadHistory());
         }
+
+        // Push post-migration state to Firebase so other devices can pull the canonical set.
+        // This ensures every device pushes once on startup; the first to push establishes v1,
+        // and subsequent devices will pull-and-replace if Firebase version > their local version.
+        if (typeof FirebaseSync !== 'undefined') {
+            FirebaseSync.pushTradeDatabase();
+        }
     }
 
     /**

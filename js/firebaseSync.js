@@ -323,9 +323,17 @@ class FirebaseSync {
                 localStorage.setItem('tradle_trade_database', JSON.stringify(db));
             }
 
+            // Increment version so other devices know this push is newer
+            const newVersion = (db.version || 0) + 1;
+            db.trades   = trades;
+            db.version  = newVersion;
+            db.lastUpdated = new Date().toISOString();
+            localStorage.setItem('tradle_trade_database', JSON.stringify(db));
+
             const payload = {
                 trades: trades,
-                lastUpdated: new Date().toISOString()
+                version: newVersion,
+                lastUpdated: db.lastUpdated
             };
 
             const resp = await fetch(`${this.DB_URL}/tradeDatabase.json`, {
@@ -335,7 +343,7 @@ class FirebaseSync {
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-            console.log(`✅ FirebaseSync: Trade database pushed (${trades.length} trades)`);
+            console.log(`✅ FirebaseSync: Trade database pushed v${newVersion} (${trades.length} trades)`);
             this._setSyncStatus('synced');
             return { success: true };
         } catch (e) {
@@ -346,8 +354,19 @@ class FirebaseSync {
     }
 
     /**
-     * Pull the trade database from Firebase and merge into localStorage.
-     * Deduplicates by order IDs AND by trade fingerprint (symbol + prices + qty + side).
+     * Pull the trade database from Firebase.
+     *
+     * Strategy: version-based last-write-wins.
+     * Each push increments a `version` counter stored in both Firebase and
+     * localStorage.  On pull, if the remote version is strictly higher than
+     * the local version, we REPLACE the local state entirely with Firebase's
+     * data.  This prevents duplicates from accumulating when different devices
+     * compute the same underlying position with slightly different FIFO
+     * fingerprints (e.g. due to same-timestamp tie-break ordering).
+     *
+     * If local version >= remote version, the local device is already at the
+     * same or a newer checkpoint (e.g. the user just uploaded a CSV that
+     * hasn't been pushed yet) — local state is kept as-is.
      */
     static async pullTradeDatabase() {
         try {
@@ -359,64 +378,26 @@ class FirebaseSync {
                 return { success: true, merged: 0, message: 'No remote trades' };
             }
 
-            // Load local DB
             const localRaw = localStorage.getItem('tradle_trade_database');
-            const localDB = localRaw ? JSON.parse(localRaw) : { trades: [], orderIds: [] };
-            const localTrades = localDB.trades || [];
+            const localDB = localRaw ? JSON.parse(localRaw) : { trades: [], version: 0 };
+            const localVersion  = localDB.version  || 0;
+            const remoteVersion = remote.version    || 0;
 
-            // Build set of local trade IDs for fast lookup
-            const localIds = new Set(localTrades.map(t => t.id).filter(Boolean));
-
-            // Build set of all local order IDs
-            const localOrderIds = new Set();
-            localTrades.forEach(t => {
-                if (t.entryOrderId) localOrderIds.add(t.entryOrderId);
-                if (t.exitOrderId) localOrderIds.add(t.exitOrderId);
-                if (t.allOrderIds) t.allOrderIds.forEach(oid => { if (oid) localOrderIds.add(oid); });
-            });
-
-            // Build fingerprint set for content-based dedup
-            // (catches duplicates where IDs differ but the trade is the same)
-            // Uses prices+qty+side only — timestamps differ across browser timezones
-            const fingerprint = (t) => {
-                const sym = (t.contract || t.symbol || '').replace(/[^A-Za-z0-9]/g, '');
-                const ePrice = Math.round((t.entryPrice || 0) * 100);
-                const xPrice = Math.round((t.exitPrice || 0) * 100);
-                const qty = t.quantity || 1;
-                const side = (t.side || 'LONG').toUpperCase();
-                return `${sym}_${ePrice}_${xPrice}_${qty}_${side}`;
-            };
-            const localFingerprints = new Set(localTrades.map(fingerprint));
-
-            let merged = 0;
-            for (const trade of remote.trades) {
-                // Skip if trade ID already in local
-                if (trade.id && localIds.has(trade.id)) continue;
-
-                // Skip if any order ID already tracked
-                const tradeOrderIds = [trade.entryOrderId, trade.exitOrderId, ...(trade.allOrderIds || [])].filter(Boolean);
-                if (tradeOrderIds.length > 0 && tradeOrderIds.some(oid => localOrderIds.has(oid))) continue;
-
-                // Skip if fingerprint matches an existing local trade
-                const fp = fingerprint(trade);
-                if (localFingerprints.has(fp)) continue;
-
-                localTrades.push(trade);
-                localIds.add(trade.id);
-                localFingerprints.add(fp);
-                tradeOrderIds.forEach(oid => localOrderIds.add(oid));
-                merged++;
-            }
-
-            if (merged > 0) {
-                localDB.trades = localTrades;
-                localDB.lastUpdated = new Date().toISOString();
+            if (remoteVersion > localVersion) {
+                // Firebase is ahead — replace local entirely
+                localDB.trades      = remote.trades;
+                localDB.version     = remoteVersion;
+                localDB.lastUpdated = remote.lastUpdated || new Date().toISOString();
                 localStorage.setItem('tradle_trade_database', JSON.stringify(localDB));
+                console.log(`📥 FirebaseSync: Replaced local with Firebase v${remoteVersion} (${remote.trades.length} trades)`);
+                this._setSyncStatus('synced');
+                return { success: true, merged: remote.trades.length };
             }
 
-            console.log(`📥 FirebaseSync: Merged ${merged} trades from remote (local now has ${localTrades.length})`);
+            // Local is at the same or newer version — nothing to do
+            console.log(`📥 FirebaseSync: Local v${localVersion} >= remote v${remoteVersion} — already up to date`);
             this._setSyncStatus('synced');
-            return { success: true, merged };
+            return { success: true, merged: 0 };
         } catch (e) {
             console.log(`📥 FirebaseSync: Trade DB pull failed: ${e.message}`);
             this._setSyncStatus('error', e.message);
