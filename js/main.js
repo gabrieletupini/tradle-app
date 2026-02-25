@@ -149,6 +149,32 @@ class TradleApp {
             }
         }
 
+        // v21c: one-time check that IBKR trades are present. Devices that had their own
+        // old TV state bypass autoLoadDefaultCSV, so the IBKR sample file never loads on them.
+        // Firebase dedup can also silently block IBKR trades if fingerprints collide with TV
+        // trades for the same instrument/prices. Load directly from the sample file if needed.
+        if (!localStorage.getItem('tradle_v21c_fix')) {
+            localStorage.setItem('tradle_v21c_fix', '1');
+            const hasIBKR = this.tradeDatabase.trades.some(t => t.broker === 'IBKR');
+            if (!hasIBKR && this.tradeDatabase.trades.length > 0) {
+                console.log('🔄 v21c: IBKR trades missing, loading from sample file...');
+                try {
+                    const resp = await fetch('data/sample-data/ibkr-trade-report-2026-02-12.csv');
+                    if (resp.ok) {
+                        const csv = await resp.text();
+                        const parseResult = await this.csvParser.parseCSV(csv, 'ibkr');
+                        const tradeResult = this.tradeCalculator.processOrders(parseResult.orders);
+                        tradeResult.trades.forEach(t => t.broker = 'IBKR');
+                        this.mergeTradesWithDatabase(tradeResult.trades, parseResult.orders);
+                        this.saveTradeDatabase();
+                        console.log(`✅ v21c: added ${tradeResult.trades.length} IBKR trades from sample file`);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ v21c failed:', e.message);
+                }
+            }
+        }
+
         // Check for any startup parameters or saved data
         const hasRestoredData = this.checkForSavedData();
 
