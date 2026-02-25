@@ -854,6 +854,27 @@ class TradleApp {
                         }
                     });
 
+                    // Backfill commissions for trades stored with totalCommission=0 when the
+                    // instrument has a non-zero spec rate (these were saved before spec-based
+                    // commission fallback was re-enabled for blank-CSV paper trading).
+                    let commissionBackfilled = 0;
+                    this.tradeDatabase.trades.forEach(trade => {
+                        if (!trade.totalCommission && trade.grossProfit !== undefined) {
+                            const specs = this.tradeCalculator.getContractSpecs(trade.contract || trade.symbol || '');
+                            if (specs.commission > 0) {
+                                const qty = trade.quantity || 1;
+                                trade.totalCommission = specs.commission * 2 * qty;
+                                trade.netProfit = (trade.grossProfit || 0) - trade.totalCommission;
+                                trade.returnValue = Math.round(trade.netProfit);
+                                commissionBackfilled++;
+                            }
+                        }
+                    });
+                    if (commissionBackfilled > 0) {
+                        console.log(`💰 Backfilled commissions for ${commissionBackfilled} trades`);
+                        this.saveTradeDatabase();
+                    }
+
                     // One-time cleanup (v20): if the DB only has Feb-24 trades (left over from the
                     // erroneous v19 wipe), clear it so autoLoadDefaultCSV can reload all 3 sample
                     // files (Feb 9-16 TV + IBKR + Feb 24 TV) and restore the full history.

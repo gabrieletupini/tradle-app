@@ -330,8 +330,8 @@ class TradeCalculator {
             const origExitQty  = exitOrder ? (exitOrder.originalQty || quantity) : quantity;
             totalCommission = entryCommNum * (quantity / origEntryQty) + exitCommNum * (quantity / origExitQty);
         } else {
-            // Blank commission in CSV = no commission (paper trading, simulated fills)
-            totalCommission = 0;
+            // Blank commission in CSV → use spec-based round-trip rate (entry + exit legs)
+            totalCommission = specs.commission * 2 * quantity;
         }
         const netProfit = grossProfit - totalCommission;
 
