@@ -381,6 +381,12 @@ class TradleApp {
                 if (!btn) return;
                 const idx = parseInt(btn.dataset.idx, 10);
                 if (isNaN(idx)) return;
+                const confirmed = confirm(
+                    'Delete this import?\n\n' +
+                    'This will also clear all trade data (trades cannot be traced to individual imports).\n' +
+                    'You can re-upload your CSV to recalculate.'
+                );
+                if (!confirmed) return;
                 const updated = this.deleteUploadHistoryEntry(idx);
                 this.uiController.renderUploadHistory(updated);
             });
@@ -1264,6 +1270,22 @@ class TradleApp {
                 history.splice(index, 1);
                 localStorage.setItem('tradle_upload_history', JSON.stringify(history));
             }
+
+            // Trades cannot be traced back to individual imports, so removing
+            // any import requires clearing the full trade database.
+            this.tradeDatabase = {
+                trades: [],
+                orderIds: new Set(),
+                lastUpdated: null
+            };
+            this.currentData = null;
+            localStorage.removeItem('tradle_current_data');
+            this.saveTradeDatabase(); // saves empty state + syncs to Firebase
+
+            this.uiController.hideDashboard();
+            this.uiController.showToast('Import removed — trade data cleared. Re-upload your CSV to recalculate.', 'info');
+            console.log('🗑️ Import deleted, trade database cleared');
+
             return history;
         } catch (e) {
             console.warn('⚠️ Failed to delete history entry:', e);
