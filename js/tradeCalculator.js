@@ -412,6 +412,8 @@ class TradeCalculator {
      * Calculate duration between two dates
      */
     calculateDuration(startTime, endTime) {
+        if (typeof startTime === 'string') startTime = new Date(startTime);
+        if (typeof endTime === 'string') endTime = new Date(endTime);
         const durationMs = endTime - startTime;
         const minutes = Math.floor(durationMs / (1000 * 60));
         const hours = Math.floor(minutes / 60);
@@ -431,6 +433,9 @@ class TradeCalculator {
      */
     formatDateTime(date) {
         if (!date) return '';
+
+        // Handle string dates (e.g. from JSON deserialization of Date objects)
+        if (typeof date === 'string') date = new Date(date);
 
         // Check if date is valid
         if (!(date instanceof Date) || isNaN(date.getTime())) {
