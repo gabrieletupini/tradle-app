@@ -997,6 +997,26 @@ class TradleApp {
                         this.saveTradeDatabase();
                     }
 
+                    // Recalculate P&L for all stored trades using the latest formula.
+                    // Ensures formula changes (e.g. non-USD forex conversion) apply
+                    // retroactively to previously imported trades.
+                    let recalcChanged = 0;
+                    this.tradeDatabase.trades = this.tradeDatabase.trades.map(trade => {
+                        try {
+                            const updated = this.tradeCalculator.calculateTrade(trade);
+                            if (Math.round(updated.netProfit * 100) !== Math.round((trade.netProfit || 0) * 100)) {
+                                recalcChanged++;
+                            }
+                            return updated;
+                        } catch (e) {
+                            return trade; // keep original if recalculation fails
+                        }
+                    });
+                    if (recalcChanged > 0) {
+                        console.log(`🔄 Recalculated P&L for ${recalcChanged} trades`);
+                        this.saveTradeDatabase();
+                    }
+
                     console.log('🔍 DEBUG: Sample trade:', this.tradeDatabase.trades[0]);
                     return true;
                 } else {
