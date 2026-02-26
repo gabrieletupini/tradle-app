@@ -311,13 +311,36 @@ class TradeCalculator {
         // Look up contract specs from the trade's actual symbol
         const specs = this.getContractSpecs(trade.contract);
 
-        // Profit calculation (works for any futures contract)
+        // Profit calculation
         // LONG:  (Exit - Entry) × Qty × Multiplier  (buy low, sell high)
         // SHORT: (Entry - Exit) × Qty × Multiplier  (sell high, buy low)
         const pointDifference = side === 'SHORT'
             ? entryPrice - exitPrice
             : exitPrice - entryPrice;
-        const grossProfit = pointDifference * quantity * specs.multiplier;
+
+        // Effective multiplier — for most instruments specs.multiplier is correct.
+        // For non-USD-quoted forex (e.g. GBPJPY) the raw point×qty product is in
+        // the quote currency, not USD.  Derive a conversion factor from the order's
+        // margin and leverage so the result is always in USD.
+        let effectiveMultiplier = specs.multiplier;
+        if (trade.margin > 0 && trade.leverage) {
+            const levMatch = String(trade.leverage).match(/(\d+)/);
+            if (levMatch) {
+                const levVal = parseFloat(levMatch[1]);
+                const refQty = (trade.entryOrder && trade.entryOrder.originalQty) || quantity;
+                if (levVal > 0 && refQty > 0 && entryPrice > 0) {
+                    const derived = (trade.margin * levVal) / (refQty * entryPrice);
+                    // Use derived value only when it differs significantly from spec
+                    // (avoids fill-price vs margin-price rounding noise on limit/stop orders)
+                    const specMult = specs.multiplier || 1;
+                    if (Math.abs(derived - specMult) / specMult > 0.1) {
+                        effectiveMultiplier = derived;
+                    }
+                }
+            }
+        }
+
+        const grossProfit = pointDifference * quantity * effectiveMultiplier;
 
         // Commission: use CSV per-order values only when at least one order has a non-zero value.
         // Blank CSV commission (paper trading) falls back to spec-based rate.
